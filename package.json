@@ -1,0 +1,19 @@
+{
+  "name": "ledgerlens",
+  "version": "0.0.1",
+  "private": true,
+  "description": "AI-driven Excel add-in for corporate accounting analysis",
+  "workspaces": [
+    "addin",
+    "server",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently -n addin,server -c blue,green \"npm --workspace addin run dev\" \"npm --workspace server run dev\"",
+    "build": "npm --workspaces run build --if-present",
+    "lint": "npm --workspaces run lint --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
