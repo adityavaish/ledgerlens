@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Office Add-in (Edge Chromium)",
+      "type": "msedge",
+      "request": "attach",
+      "port": 9229,
+      "url": "https://localhost:3002/taskpane.html",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "timeout": 45000,
+      "preLaunchTask": "Dev Server"
+    },
+    {
+      "name": "Debug Server-Side (Node)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/webpack",
+      "args": ["serve", "--mode", "development"],
+      "cwd": "${workspaceFolder}",
+      "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Excel Desktop (Edge Chromium)",
+      "configurations": [
+        "Debug Office Add-in (Edge Chromium)"
+      ]
+    }
+  ]
+}

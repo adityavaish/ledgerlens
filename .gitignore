@@ -1,27 +1,10 @@
 node_modules/
 dist/
-build/
-out/
-.cache/
 coverage/
-
-# env / secrets
 .env
-.env.*
-!.env.example
-*.pem
-*.key
-
-# editor / OS
-.vscode/
-.idea/
+*.log
 .DS_Store
 Thumbs.db
 
-# Office add-in dev certs
-**/.office-addin-dev-certs/
-
-# logs
-*.log
-npm-debug.log*
-yarn-debug.log*
+# Azure Developer CLI
+.azure/
