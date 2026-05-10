@@ -6,6 +6,41 @@
 
 /* global Excel */
 
+// ── Number-format presets ──────────────────────────────────────────────
+// Lets the model say {numberFormatPreset: "date_medium"} instead of
+// memorising raw Excel format strings. Custom strings via numberFormat win.
+const NUMBER_FORMAT_PRESETS = {
+  // Dates
+  date_short:        "m/d/yyyy",
+  date_medium:       "mmm d, yyyy",          // Jan 1, 2026
+  date_long:         "mmmm d, yyyy",         // January 1, 2026
+  date_iso:          "yyyy-mm-dd",
+  date_us:           "mm/dd/yyyy",
+  date_eu:           "dd/mm/yyyy",
+  month_year:        "mmm yyyy",
+  // Times / datetime
+  time:              "h:mm AM/PM",
+  time_24h:          "hh:mm",
+  datetime_medium:   "mmm d, yyyy h:mm AM/PM",
+  // Numbers
+  integer:           "#,##0",
+  number_2:          "#,##0.00",
+  percent:           "0%",
+  percent_2:         "0.00%",
+  // Currency (USD default; for other ISO codes pass numberFormat directly)
+  usd:               "$#,##0.00;[Red]-$#,##0.00",
+  usd_whole:         "$#,##0;[Red]-$#,##0",
+  accounting_usd:    "_($* #,##0.00_);_($* (#,##0.00);_($* \"-\"??_);_(@_)",
+  // Other
+  scientific:        "0.00E+00",
+  text:              "@",
+};
+
+function _resolveNumberFormat(preset) {
+  if (!preset) return null;
+  return NUMBER_FORMAT_PRESETS[preset] || null;
+}
+
 class ExcelOps {
   // ── Data ──────────────────────────────────────────────────────────────
 
@@ -144,24 +179,71 @@ class ExcelOps {
       if (fmt.underline !== undefined) range.format.font.underline = fmt.underline ? "Single" : "None";
       if (fmt.fontSize) range.format.font.size = fmt.fontSize;
       if (fmt.fontColor) range.format.font.color = fmt.fontColor;
+      if (fmt.fontName) range.format.font.name = fmt.fontName;
       if (fmt.fill) range.format.fill.color = fmt.fill;
-      if (fmt.numberFormat) range.numberFormat = [[fmt.numberFormat]];
       if (fmt.horizontalAlignment) range.format.horizontalAlignment = fmt.horizontalAlignment;
       if (fmt.verticalAlignment) range.format.verticalAlignment = fmt.verticalAlignment;
       if (fmt.wrapText !== undefined) range.format.wrapText = fmt.wrapText;
+      if (fmt.indentLevel !== undefined) range.format.indentLevel = fmt.indentLevel;
       if (fmt.columnWidth) range.format.columnWidth = fmt.columnWidth;
       if (fmt.rowHeight) range.format.rowHeight = fmt.rowHeight;
       if (fmt.borders) {
         const border = range.format.borders;
         const style = Excel.BorderLineStyle.continuous;
-        border.getItem("EdgeTop").style = style;
-        border.getItem("EdgeBottom").style = style;
-        border.getItem("EdgeLeft").style = style;
-        border.getItem("EdgeRight").style = style;
-        border.getItem("InsideHorizontal").style = style;
-        border.getItem("InsideVertical").style = style;
+        const sides = ["EdgeTop", "EdgeBottom", "EdgeLeft", "EdgeRight", "InsideHorizontal", "InsideVertical"];
+        for (const s of sides) border.getItem(s).style = style;
       }
-      range.format.autofitColumns();
+
+      // numberFormat / numberFormatLocal require a 2D array sized to the range.
+      const numberFormat = fmt.numberFormat || _resolveNumberFormat(fmt.numberFormatPreset);
+      if (numberFormat) {
+        range.load(["rowCount", "columnCount"]);
+        await ctx.sync();
+        const tiled = Array.from({ length: range.rowCount }, () =>
+          Array.from({ length: range.columnCount }, () => numberFormat)
+        );
+        range.numberFormat = tiled;
+      }
+
+      if (fmt.autofitColumns !== false) range.format.autofitColumns();
+      if (fmt.autofitRows) range.format.autofitRows();
+      await ctx.sync();
+    });
+  }
+
+  async formatColumns(columns, fmt) {
+    await Excel.run(async (ctx) => {
+      const sheet = ctx.workbook.worksheets.getActiveWorksheet();
+      const cols = (Array.isArray(columns) ? columns : [columns]).filter(Boolean);
+      for (const col of cols) {
+        const addr = `${col}:${col}`;
+        const range = sheet.getRange(addr);
+        if (fmt.bold !== undefined) range.format.font.bold = fmt.bold;
+        if (fmt.italic !== undefined) range.format.font.italic = fmt.italic;
+        if (fmt.fontSize) range.format.font.size = fmt.fontSize;
+        if (fmt.fontColor) range.format.font.color = fmt.fontColor;
+        if (fmt.fill) range.format.fill.color = fmt.fill;
+        if (fmt.horizontalAlignment) range.format.horizontalAlignment = fmt.horizontalAlignment;
+        if (fmt.columnWidth) range.format.columnWidth = fmt.columnWidth;
+
+        const numberFormat = fmt.numberFormat || _resolveNumberFormat(fmt.numberFormatPreset);
+        if (numberFormat) {
+          // Apply to the used portion of the column to avoid touching all 1M+ rows
+          const used = sheet.getUsedRange(true);
+          used.load(["rowCount", "rowIndex"]);
+          await ctx.sync();
+          const startRow = (used.rowIndex || 0) + 1;
+          const endRow = startRow + (used.rowCount || 1) - 1;
+          const colRange = sheet.getRange(`${col}${startRow}:${col}${endRow}`);
+          colRange.load(["rowCount", "columnCount"]);
+          await ctx.sync();
+          const tiled = Array.from({ length: colRange.rowCount }, () =>
+            Array.from({ length: colRange.columnCount }, () => numberFormat)
+          );
+          colRange.numberFormat = tiled;
+        }
+        if (fmt.autofitColumns !== false) range.format.autofitColumns();
+      }
       await ctx.sync();
     });
   }

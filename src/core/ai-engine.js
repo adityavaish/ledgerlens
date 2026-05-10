@@ -142,6 +142,9 @@ class AIEngine {
       case "format_range":
         await excelOps.formatRange(p.range, p.format || {});
         break;
+      case "format_columns":
+        await excelOps.formatColumns(p.columns, p.format || {});
+        break;
       case "conditional_format":
         await excelOps.conditionalFormat(p.range, p.rule, p.values, p.format || {});
         break;
