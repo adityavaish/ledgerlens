@@ -56,7 +56,7 @@ Rules:
 // ── State ───────────────────────────────────────────────────────────────
 let client = null;
 let session = null;
-let currentModel = "gpt-4o";
+let currentModel = process.env.LEDGERLENS_COPILOT_MODEL || "claude-opus-4.6";
 
 function isHostedEnvironment() {
   return Boolean(

@@ -1,28 +1,17 @@
 /**
- * Postinstall script — patches vscode-jsonrpc inside @github/copilot-sdk
- * to add an exports field required by Node.js v23+ ESM resolution.
+ * Postinstall script — patches vscode-jsonrpc to add an exports field
+ * required by Node.js v23+ ESM resolution. Patches both the nested copy
+ * (older npm) and the hoisted copy (newer npm).
  */
 const fs = require("fs");
 const path = require("path");
 
-const pkgPath = path.join(
-  __dirname, "..", "node_modules", "@github", "copilot-sdk",
-  "node_modules", "vscode-jsonrpc", "package.json"
-);
+const candidates = [
+  path.join(__dirname, "..", "node_modules", "@github", "copilot-sdk", "node_modules", "vscode-jsonrpc", "package.json"),
+  path.join(__dirname, "..", "node_modules", "vscode-jsonrpc", "package.json"),
+];
 
-if (!fs.existsSync(pkgPath)) {
-  console.log("[postinstall] vscode-jsonrpc not found, skipping patch.");
-  process.exit(0);
-}
-
-const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-
-if (pkg.exports) {
-  console.log("[postinstall] vscode-jsonrpc already has exports, skipping.");
-  process.exit(0);
-}
-
-pkg.exports = {
+const exportsField = {
   ".": { "import": "./lib/node/main.js", "require": "./lib/node/main.js" },
   "./*": "./*",
   "./node": { "import": "./node.js", "require": "./node.js" },
@@ -30,5 +19,18 @@ pkg.exports = {
   "./browser": { "import": "./browser.js", "require": "./browser.js" },
 };
 
-fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-console.log("[postinstall] Patched vscode-jsonrpc exports for Node.js v23+ ESM compatibility.");
+let patched = 0;
+for (const pkgPath of candidates) {
+  if (!fs.existsSync(pkgPath)) continue;
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+  if (pkg.exports) {
+    console.log(`[postinstall] vscode-jsonrpc already has exports: ${pkgPath}`);
+    continue;
+  }
+  pkg.exports = exportsField;
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+  console.log(`[postinstall] Patched ${pkgPath}`);
+  patched++;
+}
+
+if (patched === 0) console.log("[postinstall] No vscode-jsonrpc package.json patched.");

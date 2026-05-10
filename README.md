@@ -1,64 +1,94 @@
-# Ledgerlens
+## Ledgerlens
 
-> AI-driven Excel add-in for Finance teams to fetch, explore, and analyze corporate accounting data directly from the spreadsheet.
+> AI-driven Excel add-in for Finance and Accounting teams to fetch, explore, and analyze corporate accounting data directly from the spreadsheet.
 
-**Code name:** Ledgerlens
-**Target host:** Microsoft Excel (Office.js add-in — Windows, Mac, Web)
-**Status:** scaffold
+**Host:** Microsoft Excel (Office.js add-in — Windows, Mac, Web)
 
-## What it does
+### What it does
 
-Ledgerlens drops a task pane into Excel that lets accounting and FP&A users:
+Ledgerlens drops a chat task pane into Excel that lets finance and accounting users:
 
-- Pull GL data, trial balances, AP/AR aging, and journal entries from corporate accounting systems (ERP / data warehouse) into a worksheet.
+- Pull GL data, trial balances, AP/AR aging, and journal entries from corporate systems (REST / SQL / SharePoint / Microsoft Graph / Azure Data Explorer / MCP servers) into a worksheet.
 - Ask natural-language questions about the active workbook ("flag all JEs over $1M posted to intercompany accounts last quarter").
-- Generate variance, flux, and close-readiness analyses with one click; results are written back to the sheet with formulas and citations to source rows.
-- Build reusable "data pulls" and analysis templates that other finance users can run.
+- Generate variance, flux, and close-readiness analyses with chart, formula, and pivot output written back to the sheet.
+- Run multi-step `gather_data` reasoning chains with the GitHub Copilot SDK (default model: `claude-opus-4.6`).
 
-## Architecture
+### Architecture
 
-```
-┌────────────────────────┐        ┌─────────────────────────┐
-│  Excel (Office.js)     │  HTTPS │  Backend API (Node/TS)  │
-│  React task pane       │ ─────► │  - /data  (ERP fetch)   │
-│  Office.js bindings    │        │  - /chat  (AI analysis) │
-└────────────────────────┘        │  - /auth  (Entra ID)    │
-                                  └───────────┬─────────────┘
-                                              │
-                              ┌───────────────┼───────────────┐
-                              ▼               ▼               ▼
-                        ERP / GL API    Data warehouse   Azure OpenAI
-                        (SAP, D365,     (Snowflake,      (gpt-4o /
-                         NetSuite…)      Synapse…)        reasoning)
-```
-
-## Repo layout
+Single Node.js package. In dev, `webpack-dev-server` hosts both the static taskpane and the API middlewares; in production, `server.js` (Express) serves the prebuilt `dist/` and mounts the same middlewares.
 
 ```
-ledgerlens/
-├── addin/          Office Add-in (task pane UI, manifest, Office.js)
-├── server/         Backend API: ERP connectors + AI orchestration
-├── shared/         Shared TS types (DTOs for accounting data)
-└── docs/           Design notes, ERP connector specs
+Excel (Office.js taskpane)  ──HTTPS──►  Express server (port 3002)
+                                          ├── /api/chat-stream  → Copilot SDK
+                                          ├── /api/kusto/*      → Azure Data Explorer
+                                          ├── /api/mcp-stdio/*  → MCP stdio bridge
+                                          └── /api/runtime-config, /health
 ```
 
-## Quickstart
+Key directories:
+
+```
+src/
+├── taskpane/      vanilla-JS chat UI, modals, settings panel
+├── commands/      Office ribbon command function file
+├── core/          ai-engine (action dispatch), excel-ops (30+ Excel actions), plugin-api
+├── connectors/    csv, rest, sql, sharepoint, graph, kusto
+├── server/        copilot-proxy (SSE), kusto-proxy, mcp-stdio-proxy, office-sso-middleware
+└── services/      auth (MSAL + NAA), ai-service, mcp-client
+infra/             Bicep for Azure App Service for Containers (azd)
+Dockerfile         multi-stage Node 22 image, exposes :3002, runs as non-root
+```
+
+### Local dev (sideload into Excel)
+
+Prereqs: Node ≥ 22, Excel desktop or Excel for the web, GitHub Copilot subscription, `gh auth login` (or `GITHUB_TOKEN` env var).
 
 ```pwsh
-# install (run from each subproject)
-cd addin;  npm install
-cd ../server; npm install
-
-# dev — runs sideloaded Excel + backend together
-npm run dev   # (root, once turborepo/concurrently is wired up)
+npm install
+npm run start:desktop      # installs trusted dev cert, builds, sideloads into Excel
 ```
 
-Open Excel → Insert → My Add-ins → Ledgerlens (dev).
+Excel opens with a Ledgerlens button on the Home tab. Click it to open the side pane. Stop with `npm run stop`.
 
-## Roadmap
+To run the dev server alone (browser-debuggable at https://localhost:3002):
 
-- [ ] Auth via Entra ID (SSO into the workbook)
-- [ ] First ERP connector (pick one: D365 F&O / NetSuite / SAP)
-- [ ] Trial balance pull + pivot template
-- [ ] NL → analysis pipeline with row-level citations
-- [ ] Saved analysis templates and scheduling
+```pwsh
+npm run dev-server
+```
+
+### Deploy to Azure (App Service for Containers)
+
+Prereqs: [Azure Developer CLI (azd)](https://aka.ms/azd-install), [Docker Desktop](https://www.docker.com/products/docker-desktop), an Azure subscription.
+
+```pwsh
+azd auth login
+azd env new ledgerlens-prod
+azd env set GITHUB_TOKEN ghp_xxx                # Copilot SDK token
+azd env set LEDGERLENS_COPILOT_MODEL claude-opus-4.6   # optional
+azd up                                          # provisions ACR + App Service, builds & pushes image, deploys
+```
+
+The Bicep at `infra/` provisions:
+
+- Azure Container Registry (Basic)
+- Linux App Service Plan (B1) + Web App for Containers
+- User-assigned managed identity with `AcrPull` on the registry
+- Log Analytics workspace + Application Insights
+- App settings: `WEBSITES_PORT=3002`, `GITHUB_TOKEN`, `LEDGERLENS_COPILOT_MODEL`, App Insights connection string
+
+After `azd up` completes it prints `SERVICE_APP_URI` (e.g. `https://app-abc123.azurewebsites.net`). Point the manifest at it and re-sideload:
+
+```pwsh
+node scripts/set-manifest-host.js https://app-abc123.azurewebsites.net
+npm run start:desktop
+```
+
+To go back to local: `node scripts/set-manifest-host.js --reset`.
+
+### Distribute to other users
+
+After deploying, share the published `manifest.xml` (with the App Service URL) via:
+
+- **Microsoft 365 Admin Center → Integrated apps → Upload custom apps** (tenant-wide deployment)
+- A SharePoint or network share configured as a **trusted add-in catalog** (Excel → File → Options → Trust Center → Trusted Add-in Catalogs)
+- Submission to AppSource for global click-to-install

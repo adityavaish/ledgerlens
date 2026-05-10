@@ -30,9 +30,9 @@
       <Host xsi:type="Workbook">
         <DesktopFormFactor>
           <GetStarted>
-            <Title resid="Ledgerlens.GetStarted.Title" />
-            <Description resid="Ledgerlens.GetStarted.Description" />
-            <LearnMoreUrl resid="Ledgerlens.GetStarted.LearnMoreUrl" />
+            <Title resid="LL.GS.Title" />
+            <Description resid="LL.GS.Description" />
+            <LearnMoreUrl resid="LL.GS.LearnMoreUrl" />
           </GetStarted>
           <FunctionFile resid="Commands.Url" />
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
@@ -75,16 +75,16 @@
       <bt:Urls>
         <bt:Url id="Commands.Url" DefaultValue="https://localhost:3002/commands.html" />
         <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3002/taskpane.html" />
-        <bt:Url id="Ledgerlens.GetStarted.LearnMoreUrl" DefaultValue="https://github.com/adityavaish/ledgerlens" />
+        <bt:Url id="LL.GS.LearnMoreUrl" DefaultValue="https://github.com/adityavaish/ledgerlens" />
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="PivotGroup.Label" DefaultValue="Ledgerlens" />
         <bt:String id="PivotButton.Label" DefaultValue="Open Ledgerlens" />
-        <bt:String id="Ledgerlens.GetStarted.Title" DefaultValue="Get started with Ledgerlens" />
+        <bt:String id="LL.GS.Title" DefaultValue="Get started with Ledgerlens" />
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="PivotButton.Tooltip" DefaultValue="Open the Ledgerlens AI assistant to control Excel with natural language" />
-        <bt:String id="Ledgerlens.GetStarted.Description" DefaultValue="Type what you want and Ledgerlens makes it happen in your spreadsheet." />
+        <bt:String id="LL.GS.Description" DefaultValue="Type what you want and Ledgerlens makes it happen in your spreadsheet." />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

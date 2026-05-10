@@ -277,6 +277,12 @@ class AuthService {
     try {
       return await this.getToken(KUSTO_SCOPES);
     } catch (err) {
+      // If MSAL sign-in isn't configured, fall back to server-side credential
+      // (InteractiveBrowserCredential / DefaultAzureCredential) handling auth.
+      const msg = getErrorMessage(err, "");
+      if (/not signed in|client[_ ]?id|YOUR_APP_CLIENT_ID/i.test(msg)) {
+        return null;
+      }
       throw new Error(getErrorMessage(err, "Unable to acquire Azure Data Explorer token."));
     }
   }
@@ -292,8 +298,8 @@ class AuthService {
 
   async fetchKustoApi(input, init = {}) {
     const [apiToken, kustoToken] = await Promise.all([
-      this.getApiToken(),
-      this.getKustoToken(),
+      this.getApiToken().catch(() => null),
+      this.getKustoToken().catch(() => null),
     ]);
 
     const headers = new Headers(init.headers || {});
