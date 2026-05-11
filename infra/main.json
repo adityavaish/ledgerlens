@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "16378418085317228212"
+      "templateHash": "913817265056167292"
     }
   },
   "parameters": {
@@ -104,7 +104,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "151242932961950812"
+              "templateHash": "12345298628880867237"
             }
           },
           "parameters": {
@@ -283,6 +283,78 @@
                 "[resourceId('Microsoft.Web/serverfarms', format('{0}{1}', variables('abbrs').webServerFarms, parameters('resourceToken')))]",
                 "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}{1}', variables('abbrs').managedIdentityUserAssignedIdentities, parameters('resourceToken')))]"
               ]
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityPerimeters",
+              "apiVersion": "2024-06-01-preview",
+              "name": "[format('nsp-{0}', parameters('resourceToken'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityPerimeters/profiles",
+              "apiVersion": "2024-06-01-preview",
+              "name": "[format('{0}/{1}', format('nsp-{0}', parameters('resourceToken')), 'default')]",
+              "location": "[parameters('location')]",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters', format('nsp-{0}', parameters('resourceToken')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityPerimeters/profiles/accessRules",
+              "apiVersion": "2024-06-01-preview",
+              "name": "[format('{0}/{1}/{2}', format('nsp-{0}', parameters('resourceToken')), 'default', 'allow-inbound-https')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "direction": "Inbound",
+                "addressPrefixes": [
+                  "0.0.0.0/0"
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', format('nsp-{0}', parameters('resourceToken')), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityPerimeters/profiles/accessRules",
+              "apiVersion": "2024-06-01-preview",
+              "name": "[format('{0}/{1}/{2}', format('nsp-{0}', parameters('resourceToken')), 'default', 'allow-outbound-fqdns')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "direction": "Outbound",
+                "fullyQualifiedDomainNames": [
+                  "api.githubcopilot.com",
+                  "api.github.com",
+                  "github.com",
+                  "login.microsoftonline.com",
+                  "graph.microsoft.com"
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', format('nsp-{0}', parameters('resourceToken')), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityPerimeters/resourceAssociations",
+              "apiVersion": "2024-06-01-preview",
+              "name": "[format('{0}/{1}', format('nsp-{0}', parameters('resourceToken')), 'app-association')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "accessMode": "Learning",
+                "privateLinkResource": {
+                  "id": "[resourceId('Microsoft.Web/sites', format('{0}{1}', variables('abbrs').webSitesAppService, parameters('resourceToken')))]"
+                },
+                "profile": {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', format('nsp-{0}', parameters('resourceToken')), 'default')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', format('{0}{1}', variables('abbrs').webSitesAppService, parameters('resourceToken')))]",
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters', format('nsp-{0}', parameters('resourceToken')))]",
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', format('nsp-{0}', parameters('resourceToken')), 'default')]"
+              ]
             }
           ],
           "outputs": {
@@ -301,6 +373,10 @@
             "containerRegistryLoginServer": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', variables('abbrs').containerRegistryRegistries, parameters('resourceToken'))), '2023-11-01-preview').loginServer]"
+            },
+            "networkSecurityPerimeterName": {
+              "type": "string",
+              "value": "[format('nsp-{0}', parameters('resourceToken'))]"
             }
           }
         }
@@ -334,6 +410,10 @@
     "AZURE_CONTAINER_REGISTRY_NAME": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'resources'), '2025-04-01').outputs.containerRegistryName.value]"
+    },
+    "AZURE_NETWORK_SECURITY_PERIMETER_NAME": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))), 'Microsoft.Resources/deployments', 'resources'), '2025-04-01').outputs.networkSecurityPerimeterName.value]"
     }
   }
 }

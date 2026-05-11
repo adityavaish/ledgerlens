@@ -115,7 +115,76 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
   ]
 }
 
+// ─── Network Security Perimeter (preview) ────────────────────────────────
+// Associates the App Service with an NSP so its traffic is governed by
+// perimeter access rules. App Service NSP support is in public preview;
+// the subscription must have the relevant feature flag enabled.
+resource nsp 'Microsoft.Network/networkSecurityPerimeters@2024-06-01-preview' = {
+  name: 'nsp-${resourceToken}'
+  location: location
+  tags: tags
+  properties: {}
+}
+
+resource nspProfile 'Microsoft.Network/networkSecurityPerimeters/profiles@2024-06-01-preview' = {
+  parent: nsp
+  name: 'default'
+  location: location
+  properties: {}
+}
+
+// Inbound: allow public HTTPS so Excel clients can reach the taskpane.
+resource nspInboundPublic 'Microsoft.Network/networkSecurityPerimeters/profiles/accessRules@2024-06-01-preview' = {
+  parent: nspProfile
+  name: 'allow-inbound-https'
+  location: location
+  properties: {
+    direction: 'Inbound'
+    addressPrefixes: [
+      '0.0.0.0/0'
+    ]
+  }
+}
+
+// Outbound: allow the FQDNs the app needs (GitHub Copilot, Entra, Kusto, ACR, App Insights).
+resource nspOutboundFqdns 'Microsoft.Network/networkSecurityPerimeters/profiles/accessRules@2024-06-01-preview' = {
+  parent: nspProfile
+  name: 'allow-outbound-fqdns'
+  location: location
+  properties: {
+    direction: 'Outbound'
+    // NSP FQDN rules do not support wildcards. List concrete hostnames only.
+    // Add Kusto/ACR/App Insights regional hostnames here once known, or rely on
+    // 'Learning' mode (below) which logs without blocking while you observe traffic.
+    fullyQualifiedDomainNames: [
+      'api.githubcopilot.com'
+      'api.github.com'
+      'github.com'
+      'login.microsoftonline.com'
+      'graph.microsoft.com'
+    ]
+  }
+}
+
+// Bind the App Service to the NSP profile. AccessMode "Learning" lets traffic
+// flow while logging policy hits — switch to "Enforced" once you've validated.
+resource appNspAssociation 'Microsoft.Network/networkSecurityPerimeters/resourceAssociations@2024-06-01-preview' = {
+  parent: nsp
+  name: 'app-association'
+  location: location
+  properties: {
+    accessMode: 'Learning'
+    privateLinkResource: {
+      id: app.id
+    }
+    profile: {
+      id: nspProfile.id
+    }
+  }
+}
+
 output appServiceName string = app.name
 output appServiceUri string = 'https://${app.properties.defaultHostName}'
 output containerRegistryName string = acr.name
 output containerRegistryLoginServer string = acr.properties.loginServer
+output networkSecurityPerimeterName string = nsp.name

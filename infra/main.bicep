@@ -47,3 +47,4 @@ output SERVICE_APP_NAME string = resources.outputs.appServiceName
 output SERVICE_APP_URI string = resources.outputs.appServiceUri
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = resources.outputs.containerRegistryLoginServer
 output AZURE_CONTAINER_REGISTRY_NAME string = resources.outputs.containerRegistryName
+output AZURE_NETWORK_SECURITY_PERIMETER_NAME string = resources.outputs.networkSecurityPerimeterName
