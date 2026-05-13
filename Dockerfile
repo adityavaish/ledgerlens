@@ -40,6 +40,16 @@ COPY --from=build --chown=nodejs:nodejs /app/dist          ./dist
 COPY --from=build --chown=nodejs:nodejs /app/src/server    ./src/server
 COPY --from=build --chown=nodejs:nodejs /app/server.js     ./server.js
 COPY --from=build --chown=nodejs:nodejs /app/package.json  ./package.json
+COPY --from=build --chown=nodejs:nodejs /app/scripts/az-imds-shim.js ./scripts/az-imds-shim.js
+COPY --from=build --chown=nodejs:nodejs /app/scripts/az-shim.sh      ./scripts/az-shim.sh
+
+# Install the IMDS-backed `az` shim so kusto-mcp-server's AzureCliCredential
+# can mint tokens via the App Service managed identity. This avoids shipping
+# the full Azure CLI (~1 GB) in the container.
+USER root
+RUN install -m 0755 /app/scripts/az-shim.sh /usr/local/bin/az \
+ && chmod +x /app/scripts/az-imds-shim.js
+USER nodejs
 
 USER nodejs
 EXPOSE 3002
