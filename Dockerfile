@@ -39,6 +39,7 @@ COPY --from=build --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=build --chown=nodejs:nodejs /app/dist          ./dist
 COPY --from=build --chown=nodejs:nodejs /app/src/server    ./src/server
 COPY --from=build --chown=nodejs:nodejs /app/server.js     ./server.js
+COPY --from=build --chown=nodejs:nodejs /app/manifest.xml  ./manifest.xml
 COPY --from=build --chown=nodejs:nodejs /app/package.json  ./package.json
 COPY --from=build --chown=nodejs:nodejs /app/scripts/az-imds-shim.js ./scripts/az-imds-shim.js
 COPY --from=build --chown=nodejs:nodejs /app/scripts/az-shim.sh      ./scripts/az-shim.sh

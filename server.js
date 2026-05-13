@@ -4,6 +4,7 @@
  * that were previously embedded in webpack-dev-server.
  */
 const express = require("express");
+const fs = require("fs");
 const path = require("path");
 
 const { createOfficeSsoMiddleware } = require("./src/server/office-sso-middleware.js");
@@ -29,6 +30,29 @@ function getRuntimeConfig() {
 
 app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true });
+});
+
+// Manifest hosting — serves manifest.xml at a stable URL so admins can
+// reference it from M365 Centralized Deployment, users can sideload via
+// "Upload My Add-in" → URL in Office on the web, and CI can publish updates
+// without re-distributing the file.
+const MANIFEST_PATHS = ["/manifest.xml", "/manifest", "/ledgerlens.xml"];
+app.get(MANIFEST_PATHS, (_req, res) => {
+  const manifestPath = path.join(__dirname, "manifest.xml");
+  fs.stat(manifestPath, (err, stat) => {
+    if (err) {
+      res.status(404).type("text/plain").send("manifest.xml not found");
+      return;
+    }
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, must-revalidate");
+    res.setHeader("Last-Modified", stat.mtime.toUTCString());
+    res.setHeader(
+      "Content-Disposition",
+      'inline; filename="ledgerlens-manifest.xml"'
+    );
+    fs.createReadStream(manifestPath).pipe(res);
+  });
 });
 
 app.get("/api/runtime-config", (_req, res) => {
