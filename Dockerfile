@@ -21,11 +21,19 @@ RUN npm prune --omit=dev
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
-    PORT=3002
+    PORT=3002 \
+    HOME=/home/nodejs
 
-# Run as non-root for App Service.
-RUN groupadd --system --gid 1001 nodejs \
- && useradd  --system --uid 1001 --gid nodejs nodejs
+# Run as non-root for App Service. Create a real home dir + .copilot dir
+# so the Copilot CLI can write its config/state at runtime. Install
+# ca-certificates so OpenSSL can load the trust store.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && groupadd --system --gid 1001 nodejs \
+ && useradd  --system --uid 1001 --gid nodejs --create-home --home-dir /home/nodejs --shell /usr/sbin/nologin nodejs \
+ && mkdir -p /home/nodejs/.copilot \
+ && chown -R nodejs:nodejs /home/nodejs
 
 COPY --from=build --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=build --chown=nodejs:nodejs /app/dist          ./dist
