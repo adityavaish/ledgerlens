@@ -107,6 +107,7 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',        value: appi.properties.ConnectionString }
         { name: 'GITHUB_TOKEN',                                 value: githubToken }
         { name: 'LEDGERLENS_COPILOT_MODEL',                     value: copilotModel }
+        { name: 'AZURE_CLIENT_ID',                              value: uami.properties.clientId }
       ]
     }
   }

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "913817265056167292"
+      "templateHash": "136880687935868035"
     }
   },
   "parameters": {
@@ -104,7 +104,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "12345298628880867237"
+              "templateHash": "15697381901574907589"
             }
           },
           "parameters": {
@@ -272,6 +272,10 @@
                     {
                       "name": "LEDGERLENS_COPILOT_MODEL",
                       "value": "[parameters('copilotModel')]"
+                    },
+                    {
+                      "name": "AZURE_CLIENT_ID",
+                      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}{1}', variables('abbrs').managedIdentityUserAssignedIdentities, parameters('resourceToken'))), '2023-01-31').clientId]"
                     }
                   ]
                 }
