@@ -111,6 +111,21 @@ async function ensureLatestVersion(installDir) {
         await extractTarball(tmpTar, targetDir);
         try { fs.unlinkSync(tmpTar); } catch { /* ignore */ }
       }
+      // Install runtime npm dependencies into the newly-extracted version
+      // dir if we haven't already (idempotent: skip when node_modules
+      // already exists).
+      if (!fs.existsSync(path.join(targetDir, "node_modules"))) {
+        log("installing runtime dependencies for v" + latest.version + " (one-time, ~1m)");
+        const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
+        const r = spawnSync(npmCmd, ["install", "--omit=dev", "--no-audit", "--no-fund", "--loglevel=error"], {
+          cwd: targetDir,
+          stdio: "inherit",
+          shell: false,
+        });
+        if (r.status !== 0) {
+          throw new Error("npm install failed with exit code " + r.status);
+        }
+      }
       current = { version: latest.version, path: targetDir, installedAt: new Date().toISOString() };
       saveCurrent(installDir, current);
       log("installed v" + latest.version + " -> " + targetDir);

@@ -52,6 +52,21 @@ Invoke-WebRequest -UseBasicParsing -Uri $downloadUrl -OutFile $tmpTar -Headers $
 & tar -xzf $tmpTar -C $targetDir --strip-components=1
 Remove-Item $tmpTar -Force
 
+# 4b. Install runtime npm dependencies in the extracted version. The
+# release tarball ships package.json + package-lock.json but not
+# node_modules; without this step the server boots and immediately fails
+# with "Cannot find module 'express'".
+Step "installing runtime dependencies (this is a one-time step per release)"
+Push-Location $targetDir
+try {
+    & npm install --omit=dev --no-audit --no-fund --loglevel=error 2>&1 | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw "npm install failed with exit code $LASTEXITCODE"
+    }
+} finally {
+    Pop-Location
+}
+
 # 5. Pin "current" to the just-installed version.
 $current = @{ version = $version; path = $targetDir; installedAt = (Get-Date).ToString('o') } | ConvertTo-Json
 Set-Content -Path (Join-Path $installDir 'current.json') -Value $current -Encoding UTF8
