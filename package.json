@@ -3,6 +3,7 @@
   "version": "1.1.0",
   "description": "Ledgerlens — AI assistant in Excel for finance and accounting teams. Local-run launcher that auto-updates from GitHub Releases.",
   "private": false,
+  "license": "MIT",
   "main": "server.js",
   "bin": {
     "ledgerlens": "./bin/ledgerlens.js"
