@@ -52,7 +52,10 @@ jobs:
           # npm pack honors the "files" allowlist in package.json and emits a
           # single .tgz with a "package/" prefix the launcher expects.
           out=$(npm pack --pack-destination .)
-          mv "$out" "ledgerlens-${{ steps.ver.outputs.version }}.tgz"
+          target="ledgerlens-${{ steps.ver.outputs.version }}.tgz"
+          if [ "$out" != "$target" ]; then
+            mv "$out" "$target"
+          fi
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
