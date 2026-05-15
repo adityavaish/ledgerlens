@@ -85,8 +85,38 @@ html, body {
   outline: 2px solid var(--brand);
   outline-offset: -2px;
 }
+.user-btn {
+  width: auto;
+  min-width: 32px;
+  padding: 0 8px;
+  gap: 6px;
+}
 .user-btn.signed-in {
   color: var(--brand);
+  background: var(--brand-light);
+}
+.user-btn.signed-in::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+  border: 2px solid var(--bg);
+  margin-left: 22px;
+  margin-top: -16px;
+}
+.user-btn { position: relative; }
+.user-label {
+  font-size: 12px;
+  font-weight: 500;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-btn:not(.signed-in) .user-label {
+  display: none;
 }
 
 /* ─── Chat Area ─────────────────────────────────────────────────────────── */

@@ -13,6 +13,7 @@ module.exports = (env, argv) => {
     entry: {
       taskpane: "./src/taskpane/taskpane.js",
       commands: "./src/commands/commands.js",
+      "auth-redirect": "./src/taskpane/auth-redirect.js",
     },
     output: {
       path: path.resolve(__dirname, "dist"),
@@ -52,6 +53,11 @@ module.exports = (env, argv) => {
         filename: "commands.html",
         chunks: ["commands"],
       }),
+      new HtmlWebpackPlugin({
+        template: "./src/taskpane/auth-redirect.html",
+        filename: "auth-redirect.html",
+        chunks: ["auth-redirect"],
+      }),
       new CopyWebpackPlugin({
         patterns: [{ from: "assets", to: "assets" }],
       }),
@@ -67,6 +73,16 @@ module.exports = (env, argv) => {
         const { createOfficeSsoMiddleware } = require("./src/server/office-sso-middleware.js");
         const { createCopilotMiddleware } = require("./src/server/copilot-proxy.js");
         const { createStdioProxyMiddleware } = require("./src/server/mcp-stdio-proxy.js");
+        const { createKustoLocalMiddleware } = require("./src/server/kusto-local-proxy.js");
+        // Keep parity with the production server: MSAL.js popup auth needs
+        // `same-origin-allow-popups` so it can poll the sign-in window.
+        middlewares.unshift({
+          name: "coop-allow-popups",
+          middleware: (_req, res, next) => {
+            res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+            next();
+          },
+        });
         middlewares.unshift({
           name: "office-sso-auth",
           middleware: createOfficeSsoMiddleware(),
@@ -78,6 +94,10 @@ module.exports = (env, argv) => {
         middlewares.unshift({
           name: "mcp-stdio-proxy",
           middleware: createStdioProxyMiddleware(),
+        });
+        middlewares.unshift({
+          name: "kusto-local-proxy",
+          middleware: createKustoLocalMiddleware(),
         });
         return middlewares;
       },

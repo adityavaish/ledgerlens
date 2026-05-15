@@ -15,7 +15,6 @@
 
 const https = require("https");
 const http = require("http");
-const fs = require("fs");
 const { URL } = require("url");
 
 function parseArgs(argv) {
@@ -84,36 +83,6 @@ function requestJson(targetUrl, headers) {
 
 async function getAccessToken(args) {
   const resource = args.flags.resource || resourceFromScope(args.flags.scope) || "https://management.azure.com";
-
-  // ── User-delegated token override ──────────────────────────────────────
-  // If a pinned-token file is configured (set per-spawn by the MCP stdio
-  // proxy), the upstream code is forwarding the signed-in user's token. Use
-  // it verbatim instead of minting an MI token via IMDS. The file holds
-  // `{ accessToken, expiresOn, tenant?, subscription? }`.
-  const pinnedFile = process.env.LEDGERLENS_PINNED_TOKEN_FILE;
-  if (pinnedFile) {
-    try {
-      const raw = fs.readFileSync(pinnedFile, "utf8");
-      if (raw && raw.trim()) {
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed.accessToken) {
-          return {
-            accessToken: parsed.accessToken,
-            expiresOn: parsed.expiresOn || "",
-            expires_on: parsed.expires_on || undefined,
-            subscription: parsed.subscription || "",
-            tenant: parsed.tenant || process.env.AZURE_TENANT_ID || "",
-            tokenType: parsed.tokenType || "Bearer",
-          };
-        }
-      }
-    } catch (err) {
-      // If the file exists but is unreadable / malformed, surface the error
-      // instead of silently falling through to MI auth — otherwise we'd
-      // serve the wrong identity to the data plane.
-      throw new Error(`pinned token file unreadable: ${err.message}`);
-    }
-  }
 
   const identityEndpoint = process.env.IDENTITY_ENDPOINT;
   const identityHeader = process.env.IDENTITY_HEADER;

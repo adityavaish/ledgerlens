@@ -10,9 +10,22 @@ const path = require("path");
 const { createOfficeSsoMiddleware } = require("./src/server/office-sso-middleware.js");
 const { createCopilotMiddleware } = require("./src/server/copilot-proxy.js");
 const { createStdioProxyMiddleware } = require("./src/server/mcp-stdio-proxy.js");
+const { createKustoLocalMiddleware } = require("./src/server/kusto-local-proxy.js");
 
 const app = express();
 const PORT = process.env.PORT || 3002;
+
+// MSAL.js popup auth needs the page to be able to read `window.closed` on
+// the popup it just opened. Modern browsers default to a strict COOP that
+// blocks this — the symptom is a flood of "Cross-Origin-Opener-Policy
+// policy would block the window.closed call" warnings and the popup never
+// completing. `same-origin-allow-popups` keeps the page isolated from
+// other top-level windows while permitting it to interact with windows it
+// opened (i.e. the MSAL sign-in popup). COEP/CORP we leave alone.
+app.use((_req, res, next) => {
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  next();
+});
 
 function getRuntimeConfig() {
   const clientId = process.env.LEDGERLENS_CLIENT_ID || "";
@@ -63,6 +76,7 @@ app.use(createOfficeSsoMiddleware());
 // API proxy middlewares
 app.use(createCopilotMiddleware());
 app.use(createStdioProxyMiddleware());
+app.use(createKustoLocalMiddleware());
 
 // Serve built static assets
 app.use(express.static(path.join(__dirname, "dist")));

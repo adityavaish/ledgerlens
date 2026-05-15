@@ -2,7 +2,7 @@
 
 > AI-driven Excel add-in for Finance and Accounting teams to fetch, explore, and analyze corporate accounting data directly from the spreadsheet.
 
-**Host:** Microsoft Excel (Office.js add-in — Windows, Mac, Web)
+**Host:** Microsoft Excel (Office.js add-in — Windows desktop)
 
 ### What it does
 
@@ -15,82 +15,82 @@ Ledgerlens drops a chat task pane into Excel that lets finance and accounting us
 
 ### Architecture
 
-Single Node.js package. In dev, `webpack-dev-server` hosts both the static taskpane and the API middlewares; in production, `server.js` (Express) serves the prebuilt `dist/` and mounts the same middlewares.
+Ledgerlens runs entirely on the user's machine. A small launcher (`ledgerlens`) starts a local Node server on a random free port, generates an Excel add-in manifest pointing at that port, and sideloads it into Excel. The server hosts the taskpane bundle, proxies Copilot SDK chat, runs Azure Data Explorer queries directly via `azure-kusto-data`, and brokers any local stdio MCP servers the user configures.
 
 ```
-Excel (Office.js taskpane)  ──HTTPS──►  Express server (port 3002)
-                                          ├── /api/chat-stream  → Copilot SDK
-                                          ├── /api/mcp-stdio/*  → MCP stdio bridge
-                                          │                       (spawns `npx -y @mcp-apps/kusto-mcp-server`
-                                          │                        for Azure Data Explorer, plus any other
-                                          │                        user-configured stdio MCP servers)
-                                          └── /api/runtime-config, /health
+Excel (taskpane @ http://localhost:<port>)
+  └─► Local Node server (started by `ledgerlens`)
+        ├── /api/chat-stream          → Copilot SDK
+        ├── /api/kusto/{connect,query} → azure-kusto-data (withUserPrompt)
+        ├── /api/mcp-stdio/*           → user-configured stdio MCP servers
+        └── static dist/, manifest.xml, /health
 ```
+
+Kusto auth runs locally with Azure CLI's pre-admin-consented public-client app id (`04b07795-…`) using the SDK's `withUserPrompt` flow — your default browser opens once, you sign in, and the cached token is reused for the rest of the session. No custom Entra app registration, no managed identity, no secrets.
 
 Key directories:
 
 ```
+bin/
+└── ledgerlens.js   self-updating launcher (download/extract/spawn/sideload)
 src/
-├── taskpane/      vanilla-JS chat UI, modals, settings panel
-├── commands/      Office ribbon command function file
-├── core/          ai-engine (action dispatch), excel-ops (30+ Excel actions), plugin-api
-├── connectors/    csv, rest, sql, sharepoint, graph, kusto
-├── server/        copilot-proxy (SSE), mcp-stdio-proxy, office-sso-middleware
-└── services/      auth (MSAL + NAA), ai-service, mcp-client
-infra/             Bicep for Azure App Service for Containers (azd)
-Dockerfile         multi-stage Node 22 image, exposes :3002, runs as non-root
+├── taskpane/       vanilla-JS chat UI, modals, settings panel
+├── commands/       Office ribbon command function file
+├── core/           ai-engine (action dispatch), excel-ops (30+ Excel actions), plugin-api
+├── connectors/     csv, rest, sql, sharepoint, graph, kusto
+├── server/         copilot-proxy (SSE), mcp-stdio-proxy, kusto-local-proxy, office-sso-middleware
+└── services/       auth (MSAL + NAA), ai-service, mcp-client
+scripts/install.ps1            one-line installer (PowerShell)
+.github/workflows/release.yml  builds the release tarball on tag push
+manifest.xml.template          host-substituted at launch time
 ```
 
-### Local dev (sideload into Excel)
+### Install (one line, Windows + PowerShell)
 
-Prereqs: Node ≥ 22, Excel desktop or Excel for the web, GitHub Copilot subscription, `gh auth login` (or `GITHUB_TOKEN` env var).
+```pwsh
+iwr -UseBasicParsing https://raw.githubusercontent.com/adityavaish/ledgerlens/main/scripts/install.ps1 | iex
+```
+
+This downloads the latest release into `%LOCALAPPDATA%\ledgerlens\versions\<version>` and adds a `ledgerlens` shim to `%LOCALAPPDATA%\Programs\ledgerlens` (added to your user `PATH`). Requires Node.js ≥ 22 (`winget install OpenJS.NodeJS.LTS`).
+
+### Run
+
+Open a new terminal and run:
+
+```pwsh
+ledgerlens
+```
+
+On first launch the script will:
+
+1. Check `https://api.github.com/repos/adityavaish/ledgerlens/releases/latest` and upgrade in place if a newer version is published. Skip with `LEDGERLENS_SKIP_UPDATE=1`.
+2. Pick a free localhost port (override with `LEDGERLENS_PORT=3002`).
+3. Regenerate `manifest.xml` from the template with the chosen port baked into every URL.
+4. Spawn `server.js` on that port and wait until it's ready.
+5. Sideload the manifest into Excel desktop via `office-addin-debugging`.
+
+Excel opens with a Ledgerlens button on the Home tab. Click it to open the taskpane and start chatting. Stop the server with `Ctrl+C`.
+
+### Working from a checkout
 
 ```pwsh
 npm install
-npm run start:desktop      # installs trusted dev cert, builds, sideloads into Excel
+npm run build
+node bin/ledgerlens.js
 ```
 
-Excel opens with a Ledgerlens button on the Home tab. Click it to open the side pane. Stop with `npm run stop`.
+If `bin/ledgerlens.js` is run from a repo checkout and no released version is cached yet, it runs the server out of the checkout directly. Set `LEDGERLENS_SKIP_UPDATE=1` when iterating locally so it doesn't pull a different version on every run.
 
-To run the dev server alone (browser-debuggable at https://localhost:3002):
+For pure dev-server iteration (no Excel sideload, taskpane reachable in a normal browser):
 
 ```pwsh
 npm run dev-server
 ```
 
-### Deploy to Azure (App Service for Containers)
+### Releasing
 
-Prereqs: [Azure Developer CLI (azd)](https://aka.ms/azd-install), [Docker Desktop](https://www.docker.com/products/docker-desktop), an Azure subscription.
+Tag a commit `vX.Y.Z` and push the tag — `.github/workflows/release.yml` will build, run `npm pack`, and publish a `ledgerlens-X.Y.Z.tgz` plus the `install.ps1` script to the GitHub Release. The launcher fetches whichever release is marked **latest** on every run.
 
-```pwsh
-azd auth login
-azd env new ledgerlens-prod
-azd env set GITHUB_TOKEN ghp_xxx                # Copilot SDK token
-azd env set LEDGERLENS_COPILOT_MODEL claude-opus-4.6   # optional
-azd up                                          # provisions ACR + App Service, builds & pushes image, deploys
-```
+### Legacy: Azure App Service deployment
 
-The Bicep at `infra/` provisions:
-
-- Azure Container Registry (Basic)
-- Linux App Service Plan (B1) + Web App for Containers
-- User-assigned managed identity with `AcrPull` on the registry
-- Log Analytics workspace + Application Insights
-- App settings: `WEBSITES_PORT=3002`, `GITHUB_TOKEN`, `LEDGERLENS_COPILOT_MODEL`, App Insights connection string
-
-After `azd up` completes it prints `SERVICE_APP_URI` (e.g. `https://app-abc123.azurewebsites.net`). Point the manifest at it and re-sideload:
-
-```pwsh
-node scripts/set-manifest-host.js https://app-abc123.azurewebsites.net
-npm run start:desktop
-```
-
-To go back to local: `node scripts/set-manifest-host.js --reset`.
-
-### Distribute to other users
-
-After deploying, share the published `manifest.xml` (with the App Service URL) via:
-
-- **Microsoft 365 Admin Center → Integrated apps → Upload custom apps** (tenant-wide deployment)
-- A SharePoint or network share configured as a **trusted add-in catalog** (Excel → File → Options → Trust Center → Trusted Add-in Catalogs)
-- Submission to AppSource for global click-to-install
+Earlier versions of Ledgerlens were hosted on Azure App Service for Containers. That deployment is still functional but is no longer the primary distribution channel — per-user auth to Azure Data Explorer from a shared cloud host requires an Entra app registration plus admin consent, which the local-runner architecture neatly avoids. The `Dockerfile`, `azure.yaml`, and `infra/` directories remain in the tree for anyone who needs that path.

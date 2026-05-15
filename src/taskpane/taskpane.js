@@ -137,6 +137,11 @@ function initUI() {
 
   // Load saved MCP servers
   loadMcpServers();
+
+  // Hydrate the user button from any cached MSAL account so the user can
+  // see they're signed in (and as whom) on subsequent loads without having
+  // to click the sign-in button again.
+  authService.initialize().then(applyAuthUiState).catch(() => {});
 }
 
 // ── Chat ────────────────────────────────────────────────────────────────
@@ -510,6 +515,7 @@ async function connectActiveConnector() {
     $btnConnect.disabled = true;
     await connector.connect(config, authService);
     saveConnectorConfig(_activeConnectorId, config);
+    applyAuthUiState();
     closeModal();
     renderConnectorList();
   } catch (err) {
@@ -949,18 +955,44 @@ async function loadCopilotStatus() {
 }
 
 // ── Auth Toggle ─────────────────────────────────────────────────────────
+function applyAuthUiState() {
+  const btn = document.getElementById("btn-user");
+  const label = document.getElementById("user-label");
+  if (!btn) return;
+  if (authService.isSignedIn) {
+    const u = authService.user;
+    const name = u?.name || u?.email || "Signed in";
+    btn.classList.add("signed-in");
+    btn.title = `Signed in as ${u?.email || name} — click to sign out`;
+    btn.setAttribute("aria-label", btn.title);
+    if (label) label.textContent = name;
+  } else {
+    btn.classList.remove("signed-in");
+    btn.title = "Sign in";
+    btn.setAttribute("aria-label", "Sign in");
+    if (label) label.textContent = "";
+  }
+}
+
 async function toggleAuth() {
   const btn = document.getElementById("btn-user");
   if (authService.isSignedIn) {
     await authService.signOut();
-    btn.classList.remove("signed-in");
-    btn.title = "Sign In";
+    applyAuthUiState();
   } else {
-    const user = await authService.signIn();
-    if (user) {
-      btn.classList.add("signed-in");
-      btn.title = `Signed in as ${user.name}`;
+    try {
+      btn.disabled = true;
+      await authService.signIn();
+    } catch (err) {
+      // Surface the sign-in failure inline so the user knows what happened
+      // rather than seeing a silent no-op.
+      console.error("[Ledgerlens] sign-in failed:", err);
+      const msg = err && err.message ? err.message : String(err);
+      alert(`Sign-in failed: ${msg}`);
+    } finally {
+      btn.disabled = false;
     }
+    applyAuthUiState();
   }
 }
 

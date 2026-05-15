@@ -15,49 +15,10 @@
 
 const { spawn } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
-const crypto = require("crypto");
 
 /** @type {Map<string, StdioProcess>} id → process wrapper */
 const processes = new Map();
-
-// Per-spawn pinned-token file plumbing. The proxy writes the upstream
-// X-Pinned-Token header into a process-private file on every RPC; the
-// `az` shim inside the child reads from this file when AzureCliCredential
-// asks for a token, so data-plane calls run as the signed-in user.
-const PINNED_TOKEN_DIR = path.join(os.tmpdir(), "ledgerlens-mcp-tokens");
-try {
-  fs.mkdirSync(PINNED_TOKEN_DIR, { recursive: true, mode: 0o700 });
-} catch { /* ignore */ }
-
-function allocatePinnedTokenFile(id) {
-  const safeId = String(id).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const file = path.join(PINNED_TOKEN_DIR, `${safeId}-${crypto.randomBytes(8).toString("hex")}.json`);
-  // Touch with 0600 perms so other users on the host can't read tokens.
-  fs.writeFileSync(file, "", { mode: 0o600 });
-  return file;
-}
-
-function writePinnedToken(file, token, expiresOn) {
-  if (!file || !token) return;
-  const payload = {
-    accessToken: token,
-    expiresOn: expiresOn || "",
-    expires_on: expiresOn ? Math.floor(new Date(expiresOn).getTime() / 1000) : undefined,
-    tokenType: "Bearer",
-  };
-  try {
-    fs.writeFileSync(file, JSON.stringify(payload), { mode: 0o600 });
-  } catch (err) {
-    console.error("[MCP stdio] failed to write pinned token:", err.message);
-  }
-}
-
-function clearPinnedTokenFile(file) {
-  if (!file) return;
-  try { fs.unlinkSync(file); } catch { /* ignore */ }
-}
 
 function getPathEntries(env) {
   const key = Object.keys(env).find((name) => name.toLowerCase() === "path") || "PATH";
@@ -149,16 +110,7 @@ class StdioProcess {
     this._buffer = "";
     this._alive = false;
 
-    // Allocate a per-process pinned-token file. The kusto-mcp-server's
-    // AzureCliCredential will invoke our `az` shim, which reads its token
-    // from this file when present.
-    this.pinnedTokenFile = allocatePinnedTokenFile(id);
-
-    const env = {
-      ...process.env,
-      LEDGERLENS_PINNED_TOKEN_FILE: this.pinnedTokenFile,
-      ...(options.env || {}),
-    };
+    const env = { ...process.env, ...(options.env || {}) };
     const cwd = options.cwd || process.cwd();
     const resolvedCommand = resolveCommand(command, env);
     const spawnSpec = getSpawnSpec(resolvedCommand, args);
@@ -306,8 +258,6 @@ class StdioProcess {
   kill() {
     this._alive = false;
     this._rejectAll(new Error("Process killed"));
-    clearPinnedTokenFile(this.pinnedTokenFile);
-    this.pinnedTokenFile = null;
     try {
       this._child.stdin.end();
       this._child.kill("SIGTERM");
@@ -444,15 +394,6 @@ function createStdioProxyMiddleware() {
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify({ error: `MCP stdio process "${id}" not found or not running` }));
           return;
-        }
-
-        // If the caller forwarded a user-delegated bearer token (e.g. for
-        // Kusto), persist it to this process's pinned-token file so the
-        // child's `az` shim hands it to AzureCliCredential on the next call.
-        const pinnedToken = req.headers["x-pinned-token"];
-        if (pinnedToken) {
-          const expiresOn = req.headers["x-pinned-token-expires"] || "";
-          writePinnedToken(proc.pinnedTokenFile, pinnedToken, expiresOn);
         }
 
         const result = await proc.sendRequest(method, params || {});

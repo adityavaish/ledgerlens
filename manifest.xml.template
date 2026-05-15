@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+  xsi:type="TaskPaneApp">
+  <Id>77047056-bb69-4ff8-beb9-8c337b5c500e</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Ledgerlens</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Ledgerlens" />
+  <Description DefaultValue="AI-powered assistant for Excel. Use natural language to generate data, build tables, create charts, and more." />
+  <IconUrl DefaultValue="{{HOST}}/assets/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="{{HOST}}/assets/icon-128.png" />
+  <SupportUrl DefaultValue="https://github.com/adityavaish/ledgerlens" />
+  <AppDomains>
+    <AppDomain>https://login.microsoftonline.com</AppDomain>
+    <AppDomain>{{HOST}}</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Workbook" />
+  </Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="{{HOST}}/taskpane.html" />
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Workbook">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="LL.GS.Title" />
+            <Description resid="LL.GS.Description" />
+            <LearnMoreUrl resid="LL.GS.LearnMoreUrl" />
+          </GetStarted>
+          <FunctionFile resid="Commands.Url" />
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="PivotGroup">
+                <Label resid="PivotGroup.Label" />
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16x16" />
+                  <bt:Image size="32" resid="Icon.32x32" />
+                  <bt:Image size="80" resid="Icon.80x80" />
+                </Icon>
+                <Control xsi:type="Button" id="PivotButton">
+                  <Label resid="PivotButton.Label" />
+                  <Supertip>
+                    <Title resid="PivotButton.Label" />
+                    <Description resid="PivotButton.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16" />
+                    <bt:Image size="32" resid="Icon.32x32" />
+                    <bt:Image size="80" resid="Icon.80x80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>PivotPane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16x16" DefaultValue="{{HOST}}/assets/icon-16.png" />
+        <bt:Image id="Icon.32x32" DefaultValue="{{HOST}}/assets/icon-32.png" />
+        <bt:Image id="Icon.80x80" DefaultValue="{{HOST}}/assets/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Commands.Url" DefaultValue="{{HOST}}/commands.html" />
+        <bt:Url id="Taskpane.Url" DefaultValue="{{HOST}}/taskpane.html" />
+        <bt:Url id="LL.GS.LearnMoreUrl" DefaultValue="https://github.com/adityavaish/ledgerlens" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="PivotGroup.Label" DefaultValue="Ledgerlens" />
+        <bt:String id="PivotButton.Label" DefaultValue="Open Ledgerlens" />
+        <bt:String id="LL.GS.Title" DefaultValue="Get started with Ledgerlens" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="PivotButton.Tooltip" DefaultValue="Open the Ledgerlens AI assistant to control Excel with natural language" />
+        <bt:String id="LL.GS.Description" DefaultValue="Type what you want and Ledgerlens makes it happen in your spreadsheet." />
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

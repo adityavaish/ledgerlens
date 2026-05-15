@@ -5,7 +5,6 @@
  */
 
 const LOGIN_SCOPES = ["User.Read", "openid", "profile"];
-const KUSTO_SCOPES = ["https://kusto.kusto.windows.net/user_impersonation"];
 
 function getErrorMessage(err, fallback) {
   if (!err) return fallback;
@@ -65,11 +64,17 @@ async function loadRuntimeConfig() {
 async function loadMsalConfig() {
   const runtimeConfig = await loadRuntimeConfig();
 
+  // We always navigate the sign-in popup to a dedicated minimal redirect
+  // page rather than the heavy taskpane bundle — see auth-redirect.js. The
+  // page lives on the same origin so MSAL's cross-window cache + close
+  // workflow continues to work.
+  const redirectUri = window.location.origin + "/auth-redirect.html";
+
   return {
     auth: {
       clientId: runtimeConfig.clientId,
       authority: `https://login.microsoftonline.com/${runtimeConfig.tenantId}`,
-      redirectUri: runtimeConfig.redirectUri,
+      redirectUri,
     },
     cache: {
       cacheLocation: "localStorage",
@@ -107,6 +112,17 @@ class AuthService {
 
     if (typeof this._msalInstance.initialize === "function") {
       await this._msalInstance.initialize();
+    }
+
+    // MSAL requires handleRedirectPromise() to be invoked on every page
+    // load to settle any in-flight redirect / popup auth response from a
+    // previous navigation. Skipping it leaves the popup-close handshake
+    // half-finished and lets stale auth state pile up in cache.
+    try {
+      await this._msalInstance.handleRedirectPromise();
+    } catch {
+      // Non-fatal: any in-flight error is reported when the next
+      // acquireToken call runs.
     }
 
     const accounts = this._msalInstance.getAllAccounts();
@@ -148,7 +164,38 @@ class AuthService {
 
   async signIn() {
     await this.initialize();
-    await this.getToken(LOGIN_SCOPES);
+
+    const runtimeConfig = await this.getRuntimeConfig();
+    if (!runtimeConfig.clientId || runtimeConfig.clientId === "YOUR_APP_CLIENT_ID") {
+      throw new Error(
+        "Sign-in is not configured: the server is missing LEDGERLENS_CLIENT_ID. Set it on the App Service and reload."
+      );
+    }
+
+    if (runtimeConfig.naaEnabled) {
+      // NAA flow uses the existing Office identity — no popup needed.
+      await this.acquireNaaToken(LOGIN_SCOPES);
+      return this.user;
+    }
+
+    // Standard MSAL.js flow: try silent if we already have a cached account,
+    // otherwise pop the sign-in window directly. getToken() throws on no
+    // account, so we can't use it for the first-time sign-in path.
+    if (this._account) {
+      try {
+        const silent = await this._msalInstance.acquireTokenSilent({
+          scopes: LOGIN_SCOPES,
+          account: this._account,
+        });
+        this._account = silent?.account || this._account;
+        return this.user;
+      } catch {
+        // fall through to interactive
+      }
+    }
+
+    const result = await this._msalInstance.acquireTokenPopup({ scopes: LOGIN_SCOPES });
+    this._account = result?.account || this._account;
     return this.user;
   }
 
@@ -270,49 +317,6 @@ class AuthService {
       return await this.acquireNaaToken([runtimeConfig.apiScope]);
     } catch (err) {
       throw new Error(getErrorMessage(err, "Unable to acquire API token through Nested App Authentication."));
-    }
-  }
-
-  /**
-   * Acquire a Kusto access token plus expiry for the signed-in user.
-   * Returns { accessToken, expiresOn } where expiresOn is an ISO-8601 string
-   * suitable for the X-Pinned-Token-Expires header. Returns null if the
-   * sign-in flow isn't configured / the user isn't signed in — in that case
-   * the server-side managed identity will be used.
-   */
-  async getKustoToken() {
-    try {
-      await this.initialize();
-      const runtimeConfig = await this.getRuntimeConfig();
-
-      let response;
-      if (runtimeConfig.naaEnabled) {
-        // NAA path doesn't expose expiresOn directly; assume a 60min window.
-        const accessToken = await this.acquireNaaToken(KUSTO_SCOPES);
-        return accessToken
-          ? { accessToken, expiresOn: new Date(Date.now() + 55 * 60 * 1000).toISOString() }
-          : null;
-      }
-
-      if (!this._account) return null;
-      const request = { scopes: KUSTO_SCOPES, account: this._account };
-      try {
-        response = await this._msalInstance.acquireTokenSilent(request);
-      } catch {
-        response = await this._msalInstance.acquireTokenPopup(request);
-        this._account = response?.account || this._account;
-      }
-      if (!response?.accessToken) return null;
-      const expiresOn = response.expiresOn instanceof Date
-        ? response.expiresOn.toISOString()
-        : (typeof response.expiresOn === "string" ? response.expiresOn : "");
-      return { accessToken: response.accessToken, expiresOn };
-    } catch (err) {
-      const msg = getErrorMessage(err, "");
-      if (/not signed in|client[_ ]?id|YOUR_APP_CLIENT_ID/i.test(msg)) {
-        return null;
-      }
-      throw new Error(getErrorMessage(err, "Unable to acquire Azure Data Explorer token."));
     }
   }
 

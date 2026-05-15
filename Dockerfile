@@ -29,15 +29,15 @@ ENV NODE_ENV=production \
     NPM_CONFIG_CACHE=/home/nodejs/.npm \
     NPM_CONFIG_UPDATE_NOTIFIER=false
 
-# Run as non-root for App Service. ca-certificates + shadow-utils +
-# coreutils are needed for the OpenSSL trust store, `useradd`/`groupadd`,
-# and `install`/`sed` used later in this stage.
-RUN tdnf install -y ca-certificates shadow-utils coreutils sed \
- && tdnf clean all \
- && groupadd --system --gid 1001 nodejs \
- && useradd  --system --uid 1001 --gid nodejs --create-home --home-dir /home/nodejs --shell /sbin/nologin nodejs \
+# Run as non-root for App Service. The mcr.microsoft.com/azurelinux/base/nodejs
+# image doesn't ship shadow-utils (no useradd/groupadd) and tdnf can't reach
+# the Azure Linux package repos from ACR Tasks (GPG verification 403), so we
+# create the nodejs user by writing passwd/group directly. ca-certificates,
+# sed, install (coreutils) are present in the base image.
+RUN echo "nodejs:x:1001:1001::/home/nodejs:/bin/sh" >> /etc/passwd \
+ && echo "nodejs:x:1001:" >> /etc/group \
  && mkdir -p /home/nodejs/.copilot \
- && chown -R nodejs:nodejs /home/nodejs
+ && chown -R 1001:1001 /home/nodejs
 
 COPY --from=build --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=build --chown=nodejs:nodejs /app/dist          ./dist

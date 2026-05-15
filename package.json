@@ -1,15 +1,28 @@
 {
-  "name": "ledgerlens-excel-addin",
-  "version": "1.0.0",
-  "description": "Ledgerlens — AI assistant in Excel for finance and accounting teams. Pull, analyze, and reconcile corporate accounting data with natural language.",
-  "private": true,
+  "name": "ledgerlens",
+  "version": "1.1.0",
+  "description": "Ledgerlens — AI assistant in Excel for finance and accounting teams. Local-run launcher that auto-updates from GitHub Releases.",
+  "private": false,
   "main": "server.js",
+  "bin": {
+    "ledgerlens": "./bin/ledgerlens.js"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "scripts/",
+    "src/server/",
+    "server.js",
+    "manifest.xml.template",
+    "manifest.xml",
+    "README.md"
+  ],
   "scripts": {
     "build": "webpack --mode production",
     "build:dev": "webpack --mode development",
     "dev-server": "webpack serve --mode development",
-    "start:mcp-bridge": "node scripts/local-mcp-bridge.js",
-    "start": "node server.js",
+    "start": "node bin/ledgerlens.js",
+    "start:server": "node server.js",
     "start:debug": "office-addin-debugging start manifest.xml",
     "start:desktop": "office-addin-debugging start manifest.xml desktop",
     "start:web": "office-addin-debugging start manifest.xml web",
@@ -25,6 +38,7 @@
     "@azure/msal-browser": "^3.10.0",
     "@github/copilot-sdk": "^0.1.32",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "azure-kusto-data": "^7.1.0",
     "express": "^4.21.0",
     "jose": "^6.0.11"
   },

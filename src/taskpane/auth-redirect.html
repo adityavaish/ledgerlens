@@ -1,0 +1,28 @@
+<!doctype html>
+<!--
+  Ledgerlens — MSAL popup redirect target.
+  AAD redirects the sign-in popup window to this URL with an auth code in
+  the hash. The accompanying auth-redirect.js script bootstraps a tiny
+  MSAL instance, calls handleRedirectPromise(), which posts the result to
+  the parent window and closes this popup. Using a minimal HTML page here
+  (instead of the full taskpane bundle) avoids reloading the entire app
+  inside the popup and works around Office WebView2 ↔ Edge popup
+  Cross-Origin-Opener-Policy isolation quirks.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Signing in…</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 24px; color: #333; }
+    .msg { max-width: 360px; }
+  </style>
+</head>
+<body>
+  <div class="msg">
+    <p>Completing sign-in…</p>
+    <p>You can close this window if it does not close automatically.</p>
+  </div>
+</body>
+</html>
