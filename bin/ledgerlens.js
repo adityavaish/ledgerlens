@@ -170,6 +170,29 @@ async function waitForServer(host, port, timeoutMs) {
   }
   return false;
 }
+async function ensureOfficeDevCerts(versionDir) {
+  // Office Add-ins require https:// for SourceLocation URLs, even on
+  // localhost. We use Microsoft's `office-addin-dev-certs` package to
+  // generate + install a local development CA + cert (no admin required
+  // on Windows; uses CurrentUser cert store). Idempotent.
+  try {
+    const certsPath = path.join(versionDir, "node_modules", "office-addin-dev-certs");
+    if (!fs.existsSync(certsPath)) {
+      warn("office-addin-dev-certs not installed; sideload may fail.");
+      return false;
+    }
+    const certs = require(certsPath);
+    if (typeof certs.ensureCertificatesAreInstalled === "function") {
+      log("ensuring Office dev certs are installed (one-time, may prompt to trust a local CA)…");
+      await certs.ensureCertificatesAreInstalled();
+      return true;
+    }
+  } catch (err) {
+    warn("could not install dev certs: " + (err && err.message ? err.message : err));
+  }
+  return false;
+}
+
 function trySideloadIntoExcel(versionDir, manifestPath) {
   const localBin = path.join(versionDir, "node_modules", ".bin",
     process.platform === "win32" ? "office-addin-debugging.cmd" : "office-addin-debugging");
@@ -177,7 +200,7 @@ function trySideloadIntoExcel(versionDir, manifestPath) {
     log("sideloading manifest into Excel desktop");
     const res = spawnSync(localBin, ["start", manifestPath, "desktop"], { stdio: "inherit", shell: false });
     if (res.status === 0) return true;
-    warn("sideload returned non-zero status");
+    warn("sideload returned non-zero status — Excel may need to be restarted or the manifest sideloaded manually.");
     return false;
   }
   warn("office-addin-debugging not found; sideload manually: " + manifestPath);
@@ -199,12 +222,16 @@ async function main() {
       throw new Error("No installed version and no local server.js. Aborting.");
     }
   }
+  const certsReady = await ensureOfficeDevCerts(versionDir);
   const port = await pickFreePort();
-  const host = "http://localhost:" + port;
+  const scheme = certsReady ? "https" : "http";
+  const host = scheme + "://localhost:" + port;
   const manifestPath = regenerateManifest(versionDir, host);
   log("starting server on " + host);
   const child = spawn(process.execPath, [path.join(versionDir, "server.js")], {
-    cwd: versionDir, env: { ...process.env, PORT: String(port) }, stdio: "inherit",
+    cwd: versionDir,
+    env: { ...process.env, PORT: String(port), LEDGERLENS_FORCE_HTTP: certsReady ? "" : "1" },
+    stdio: "inherit",
   });
   let stopped = false;
   const stop = () => { if (stopped) return; stopped = true; try { child.kill(); } catch { /* ignore */ } };
@@ -215,6 +242,9 @@ async function main() {
   if (!ready) warn("server did not become ready within 15s");
   else {
     log("server is live at " + host);
+    if (!certsReady) {
+      warn("Office Add-ins require https:// — Excel sideload will fail. Install dev certs and re-run.");
+    }
     if (fs.existsSync(manifestPath)) trySideloadIntoExcel(versionDir, manifestPath);
     log("press Ctrl+C to stop");
   }

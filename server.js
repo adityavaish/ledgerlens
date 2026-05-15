@@ -5,6 +5,8 @@
  */
 const express = require("express");
 const fs = require("fs");
+const http = require("http");
+const https = require("https");
 const path = require("path");
 
 const { createOfficeSsoMiddleware } = require("./src/server/office-sso-middleware.js");
@@ -15,6 +17,36 @@ const { createMcpConfigDiscoveryMiddleware } = require("./src/server/mcp-config-
 
 const app = express();
 const PORT = process.env.PORT || 3002;
+
+/**
+ * Load the office-addin-dev-certs key/cert if available so the server can
+ * speak HTTPS. Excel only loads add-in manifests whose `SourceLocation`
+ * is https://, so this is required for a successful sideload. Falls back
+ * to HTTP for non-Excel callers (browser preview, `curl /health`).
+ */
+function tryGetHttpsOptions() {
+  if (process.env.LEDGERLENS_FORCE_HTTP === "1") return null;
+  try {
+    const certs = require("office-addin-dev-certs");
+    if (typeof certs.getHttpsServerOptions === "function") {
+      return certs.getHttpsServerOptions();
+    }
+  } catch { /* package missing — fall back to HTTP */ }
+  // Manual lookup as a backstop: the CLI lays files at
+  // ~/.office-addin-dev-certs/{localhost.key, localhost.crt, ca.crt}.
+  const certsDir = path.join(process.env.USERPROFILE || process.env.HOME || ".", ".office-addin-dev-certs");
+  const keyPath = path.join(certsDir, "localhost.key");
+  const crtPath = path.join(certsDir, "localhost.crt");
+  const caPath  = path.join(certsDir, "ca.crt");
+  if (fs.existsSync(keyPath) && fs.existsSync(crtPath)) {
+    return {
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(crtPath),
+      ca: fs.existsSync(caPath) ? fs.readFileSync(caPath) : undefined,
+    };
+  }
+  return null;
+}
 
 // MSAL.js popup auth needs the page to be able to read `window.closed` on
 // the popup it just opened. Modern browsers default to a strict COOP that
@@ -88,6 +120,13 @@ app.get("*", (_req, res) => {
   res.sendFile(path.join(__dirname, "dist", "taskpane.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`Ledgerlens server listening on port ${PORT}`);
-});
+const httpsOpts = tryGetHttpsOptions();
+if (httpsOpts) {
+  https.createServer(httpsOpts, app).listen(PORT, () => {
+    console.log(`Ledgerlens server listening on https://localhost:${PORT}`);
+  });
+} else {
+  http.createServer(app).listen(PORT, () => {
+    console.log(`Ledgerlens server listening on http://localhost:${PORT} (HTTPS disabled — Office sideload will be unavailable)`);
+  });
+}
