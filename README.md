@@ -20,8 +20,10 @@ Single Node.js package. In dev, `webpack-dev-server` hosts both the static taskp
 ```
 Excel (Office.js taskpane)  ──HTTPS──►  Express server (port 3002)
                                           ├── /api/chat-stream  → Copilot SDK
-                                          ├── /api/kusto/*      → Azure Data Explorer
                                           ├── /api/mcp-stdio/*  → MCP stdio bridge
+                                          │                       (spawns `npx -y @mcp-apps/kusto-mcp-server`
+                                          │                        for Azure Data Explorer, plus any other
+                                          │                        user-configured stdio MCP servers)
                                           └── /api/runtime-config, /health
 ```
 
@@ -33,7 +35,7 @@ src/
 ├── commands/      Office ribbon command function file
 ├── core/          ai-engine (action dispatch), excel-ops (30+ Excel actions), plugin-api
 ├── connectors/    csv, rest, sql, sharepoint, graph, kusto
-├── server/        copilot-proxy (SSE), kusto-proxy, mcp-stdio-proxy, office-sso-middleware
+├── server/        copilot-proxy (SSE), mcp-stdio-proxy, office-sso-middleware
 └── services/      auth (MSAL + NAA), ai-service, mcp-client
 infra/             Bicep for Azure App Service for Containers (azd)
 Dockerfile         multi-stage Node 22 image, exposes :3002, runs as non-root

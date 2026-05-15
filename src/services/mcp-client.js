@@ -25,9 +25,13 @@ class McpClient {
     this.onStatusChange = null;
   }
 
-  /** List all registered server ids. */
+  /** List all registered server ids (excluding hidden / connector-owned ones). */
   get serverIds() {
-    return Array.from(this._sessions.keys());
+    const ids = [];
+    for (const [id, session] of this._sessions) {
+      if (!session.hidden) ids.push(id);
+    }
+    return ids;
   }
 
   /** Get a session by server id. */
@@ -103,10 +107,14 @@ class McpClient {
   /**
    * List tools across all connected MCP servers.
    * Returns [{ serverId, tool }] where tool has name, description, inputSchema.
+   * Sessions flagged `hidden` (e.g. connector-owned) are excluded so the AI
+   * engine doesn't try to call tools whose arguments only the owning
+   * connector knows.
    */
   getAllTools() {
     const result = [];
     for (const [serverId, session] of this._sessions) {
+      if (session.hidden) continue;
       for (const tool of session.tools) {
         result.push({ serverId, tool });
       }
@@ -128,11 +136,12 @@ class McpClient {
   }
 
   /**
-   * List resources across all connected MCP servers.
+   * List resources across all connected MCP servers (excluding hidden sessions).
    */
   getAllResources() {
     const result = [];
     for (const [serverId, session] of this._sessions) {
+      if (session.hidden) continue;
       for (const resource of session.resources) {
         result.push({ serverId, resource });
       }
@@ -150,12 +159,13 @@ class McpClient {
   }
 
   /**
-   * List prompts across all connected MCP servers.
+   * List prompts across all connected MCP servers (excluding hidden sessions).
    * Returns [{ serverId, prompt }] where prompt has name, description, arguments.
    */
   getAllPrompts() {
     const result = [];
     for (const [serverId, session] of this._sessions) {
+      if (session.hidden) continue;
       for (const prompt of session.prompts) {
         result.push({ serverId, prompt });
       }
@@ -612,6 +622,10 @@ class StdioSession {
     this._reconnectEnabled = true;
     this._client = null;
     this.transport = "stdio";
+    // Sessions flagged hidden are owned by an internal subsystem (e.g. the
+    // Kusto connector) and must not appear in the user-facing MCP server list
+    // nor be advertised to the AI engine as callable tools.
+    this.hidden = !!opts.hidden;
 
     /** @type {Array<{name: string, description: string, inputSchema: object}>} */
     this.tools = [];
@@ -658,14 +672,15 @@ class StdioSession {
    * Send a JSON-RPC request through the stdio proxy.
    * @param {string} method
    * @param {object} params
+   * @param {object} [opts]    Optional: { headers: {...} } extra HTTP headers
    * @returns {Promise<object>}
    */
-  async _rpc(method, params = {}) {
+  async _rpc(method, params = {}, opts = {}) {
     let res;
     try {
       res = await fetch(`${this._proxyBaseUrl}/api/mcp-stdio/rpc`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
         body: JSON.stringify({ id: this.id, method, params }),
       });
     } catch (err) {
@@ -682,9 +697,16 @@ class StdioSession {
     return data.result;
   }
 
-  /** Call a tool on this server. */
-  async callTool(name, args = {}) {
-    return this._rpc("tools/call", { name, arguments: args });
+  /**
+   * Call a tool on this server.
+   * @param {string} name
+   * @param {object} args
+   * @param {object} [opts]  Optional: { headers: {...} } extra HTTP headers
+   *                          (used by the Kusto connector to forward an
+   *                          X-Pinned-Token so queries run as the user).
+   */
+  async callTool(name, args = {}, opts = {}) {
+    return this._rpc("tools/call", { name, arguments: args }, opts);
   }
 
   /** Read a resource by URI. */

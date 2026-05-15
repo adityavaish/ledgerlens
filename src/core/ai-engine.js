@@ -60,9 +60,14 @@ class AIEngine {
           if (onThinking) onThinking(`Gathering: ${action.params?.query?.slice(0, 60) || "data"}…`);
           const gatherResult = await this._handleGatherData(action.params || {});
 
+          const isFinalIteration = iteration === MAX_ITERATIONS - 1;
+          const terminalHint = isFinalIteration
+            ? `\n\nYou have reached the maximum number of data-gathering steps (${MAX_ITERATIONS}). You MUST now produce a TERMINAL action (explain, query_and_display, fetch_data, generate_data, etc.) — do NOT issue another gather_data.`
+            : "";
+
           if (gatherResult.error) {
             // Feed error back so AI can try a different approach
-            prompt = `The gather_data query "${action.params?.query}" failed with error: "${gatherResult.error}". Try a different approach. Original request: "${userCommand}"`;
+            prompt = `The gather_data query "${action.params?.query}" failed with error: "${gatherResult.error}". Try a different approach. Original request: "${userCommand}"${terminalHint}`;
           } else {
             // Feed results back so AI can continue reasoning
             prompt = [
@@ -72,7 +77,7 @@ class AIEngine {
               `Data: ${JSON.stringify(gatherResult.data).slice(0, 30000)}`,
               ``,
               `Now continue with the original request: "${userCommand}"`,
-              `If you have enough information, provide your final response. You can use "explain" with a detailed markdown message, "query_and_display" to show results, or any other terminal action.`,
+              `If you have enough information, provide your final response. You can use "explain" with a detailed markdown message, "query_and_display" to show results, or any other terminal action.${terminalHint}`,
             ].join("\n");
           }
           continue; // loop again
@@ -80,6 +85,17 @@ class AIEngine {
 
         // Any other action is terminal — break the loop
         break;
+      }
+
+      // Defensive: if the AI is still returning gather_data after MAX_ITERATIONS,
+      // fall back to an explain with whatever context we have so the user gets
+      // an answer instead of an "Unknown action" error.
+      if (action && action.action === "gather_data") {
+        action = {
+          action: "explain",
+          message:
+            "I gathered information across multiple steps but couldn't reach a final answer within the iteration limit. Please refine your request or break it into smaller questions.",
+        };
       }
 
       // 3. Execute the terminal action

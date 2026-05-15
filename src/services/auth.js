@@ -273,12 +273,41 @@ class AuthService {
     }
   }
 
+  /**
+   * Acquire a Kusto access token plus expiry for the signed-in user.
+   * Returns { accessToken, expiresOn } where expiresOn is an ISO-8601 string
+   * suitable for the X-Pinned-Token-Expires header. Returns null if the
+   * sign-in flow isn't configured / the user isn't signed in — in that case
+   * the server-side managed identity will be used.
+   */
   async getKustoToken() {
     try {
-      return await this.getToken(KUSTO_SCOPES);
+      await this.initialize();
+      const runtimeConfig = await this.getRuntimeConfig();
+
+      let response;
+      if (runtimeConfig.naaEnabled) {
+        // NAA path doesn't expose expiresOn directly; assume a 60min window.
+        const accessToken = await this.acquireNaaToken(KUSTO_SCOPES);
+        return accessToken
+          ? { accessToken, expiresOn: new Date(Date.now() + 55 * 60 * 1000).toISOString() }
+          : null;
+      }
+
+      if (!this._account) return null;
+      const request = { scopes: KUSTO_SCOPES, account: this._account };
+      try {
+        response = await this._msalInstance.acquireTokenSilent(request);
+      } catch {
+        response = await this._msalInstance.acquireTokenPopup(request);
+        this._account = response?.account || this._account;
+      }
+      if (!response?.accessToken) return null;
+      const expiresOn = response.expiresOn instanceof Date
+        ? response.expiresOn.toISOString()
+        : (typeof response.expiresOn === "string" ? response.expiresOn : "");
+      return { accessToken: response.accessToken, expiresOn };
     } catch (err) {
-      // If MSAL sign-in isn't configured, fall back to server-side credential
-      // (InteractiveBrowserCredential / DefaultAzureCredential) handling auth.
       const msg = getErrorMessage(err, "");
       if (/not signed in|client[_ ]?id|YOUR_APP_CLIENT_ID/i.test(msg)) {
         return null;
@@ -293,23 +322,6 @@ class AuthService {
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
     }
-    return fetch(input, { ...init, headers });
-  }
-
-  async fetchKustoApi(input, init = {}) {
-    const [apiToken, kustoToken] = await Promise.all([
-      this.getApiToken().catch(() => null),
-      this.getKustoToken().catch(() => null),
-    ]);
-
-    const headers = new Headers(init.headers || {});
-    if (apiToken) {
-      headers.set("Authorization", `Bearer ${apiToken}`);
-    }
-    if (kustoToken) {
-      headers.set("X-Kusto-Access-Token", kustoToken);
-    }
-
     return fetch(input, { ...init, headers });
   }
 

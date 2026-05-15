@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1.7
 
 # ─── Build stage ─────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS build
+# Azure Linux 3.0 with Node.js 24 (no Node 22 variant is published; the app's
+# `engines.node >=22` is satisfied). Pulled from MCR so we stay on a
+# Microsoft-supported, vulnerability-patched base image.
+FROM mcr.microsoft.com/azurelinux/base/nodejs:24 AS build
 WORKDIR /app
 
 # Install all deps (incl. dev) for the webpack build.
@@ -18,20 +21,21 @@ RUN npm prune --omit=dev
 
 
 # ─── Runtime stage ───────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS runtime
+FROM mcr.microsoft.com/azurelinux/base/nodejs:24 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3002 \
-    HOME=/home/nodejs
+    HOME=/home/nodejs \
+    NPM_CONFIG_CACHE=/home/nodejs/.npm \
+    NPM_CONFIG_UPDATE_NOTIFIER=false
 
-# Run as non-root for App Service. Create a real home dir + .copilot dir
-# so the Copilot CLI can write its config/state at runtime. Install
-# ca-certificates so OpenSSL can load the trust store.
-RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates \
- && rm -rf /var/lib/apt/lists/* \
+# Run as non-root for App Service. ca-certificates + shadow-utils +
+# coreutils are needed for the OpenSSL trust store, `useradd`/`groupadd`,
+# and `install`/`sed` used later in this stage.
+RUN tdnf install -y ca-certificates shadow-utils coreutils sed \
+ && tdnf clean all \
  && groupadd --system --gid 1001 nodejs \
- && useradd  --system --uid 1001 --gid nodejs --create-home --home-dir /home/nodejs --shell /usr/sbin/nologin nodejs \
+ && useradd  --system --uid 1001 --gid nodejs --create-home --home-dir /home/nodejs --shell /sbin/nologin nodejs \
  && mkdir -p /home/nodejs/.copilot \
  && chown -R nodejs:nodejs /home/nodejs
 
@@ -44,14 +48,19 @@ COPY --from=build --chown=nodejs:nodejs /app/package.json  ./package.json
 COPY --from=build --chown=nodejs:nodejs /app/scripts/az-imds-shim.js ./scripts/az-imds-shim.js
 COPY --from=build --chown=nodejs:nodejs /app/scripts/az-shim.sh      ./scripts/az-shim.sh
 
-# Install the IMDS-backed `az` shim so kusto-mcp-server's AzureCliCredential
-# can mint tokens via the App Service managed identity. This avoids shipping
-# the full Azure CLI (~1 GB) in the container.
+# Pre-install the Kusto MCP server so `npx -y @mcp-apps/kusto-mcp-server`
+# (spawned by the runtime MCP stdio bridge) resolves instantly from the
+# global prefix instead of fetching from the npm registry on first use —
+# the registry fetch easily exceeds the MCP initialize-handshake timeout.
+# We install globally as root, then hand the nodejs user a writable npm
+# cache so `npx` doesn't EACCES on its tmp dir at runtime.
 USER root
+RUN npm install -g --no-audit --no-fund @mcp-apps/kusto-mcp-server@1.0.47 \
+ && mkdir -p /home/nodejs/.npm \
+ && chown -R nodejs:nodejs /home/nodejs/.npm
 RUN install -m 0755 /app/scripts/az-shim.sh /usr/local/bin/az \
+ && sed -i 's/\r$//' /usr/local/bin/az /app/scripts/az-imds-shim.js \
  && chmod +x /app/scripts/az-imds-shim.js
-USER nodejs
-
 USER nodejs
 EXPOSE 3002
 

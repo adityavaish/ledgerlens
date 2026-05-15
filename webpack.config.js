@@ -67,7 +67,6 @@ module.exports = (env, argv) => {
         const { createOfficeSsoMiddleware } = require("./src/server/office-sso-middleware.js");
         const { createCopilotMiddleware } = require("./src/server/copilot-proxy.js");
         const { createStdioProxyMiddleware } = require("./src/server/mcp-stdio-proxy.js");
-        const { createKustoProxyMiddleware } = require("./src/server/kusto-proxy.js");
         middlewares.unshift({
           name: "office-sso-auth",
           middleware: createOfficeSsoMiddleware(),
@@ -79,10 +78,6 @@ module.exports = (env, argv) => {
         middlewares.unshift({
           name: "mcp-stdio-proxy",
           middleware: createStdioProxyMiddleware(),
-        });
-        middlewares.unshift({
-          name: "kusto-proxy",
-          middleware: createKustoProxyMiddleware(),
         });
         return middlewares;
       },
