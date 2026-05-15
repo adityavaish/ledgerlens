@@ -74,6 +74,7 @@ module.exports = (env, argv) => {
         const { createCopilotMiddleware } = require("./src/server/copilot-proxy.js");
         const { createStdioProxyMiddleware } = require("./src/server/mcp-stdio-proxy.js");
         const { createKustoLocalMiddleware } = require("./src/server/kusto-local-proxy.js");
+        const { createMcpConfigDiscoveryMiddleware } = require("./src/server/mcp-config-discovery.js");
         // Keep parity with the production server: MSAL.js popup auth needs
         // `same-origin-allow-popups` so it can poll the sign-in window.
         middlewares.unshift({
@@ -98,6 +99,10 @@ module.exports = (env, argv) => {
         middlewares.unshift({
           name: "kusto-local-proxy",
           middleware: createKustoLocalMiddleware(),
+        });
+        middlewares.unshift({
+          name: "mcp-config-discovery",
+          middleware: createMcpConfigDiscoveryMiddleware(),
         });
         return middlewares;
       },

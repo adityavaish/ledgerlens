@@ -41,7 +41,7 @@ let _activeMcpServerId = null;
 let _commandHistory = [];
 let _historyIndex = -1;
 
-const DEFAULT_LOCAL_MCP_BRIDGE_URL = "http://127.0.0.1:3011";
+const DEFAULT_LOCAL_MCP_BRIDGE_URL = ""; // empty = same-origin (Ledgerlens local server)
 
 // ── Initialization ──────────────────────────────────────────────────────
 if (typeof Office !== "undefined" && Office.onReady) {
@@ -551,8 +551,12 @@ function onMcpTransportChange() {
 }
 
 function getLocalMcpBridgeUrl() {
+  // Default to same-origin: the Ledgerlens local server itself hosts
+  // /api/mcp-stdio/* and /api/mcp-config/discover. Power users can override
+  // via localStorage to point at a separate bridge running elsewhere.
   try {
-    const value = localStorage.getItem("ledgerlens_local_mcp_bridge_url") || DEFAULT_LOCAL_MCP_BRIDGE_URL;
+    const value = localStorage.getItem("ledgerlens_local_mcp_bridge_url");
+    if (!value) return DEFAULT_LOCAL_MCP_BRIDGE_URL;
     return value.replace(/\/+$/, "");
   } catch {
     return DEFAULT_LOCAL_MCP_BRIDGE_URL;
@@ -840,7 +844,8 @@ async function loadMcpServers() {
 
 async function importLocalMcpServers() {
   const proxyBaseUrl = getLocalMcpBridgeUrl();
-  setMcpImportStatus(`Checking local MCP bridge at ${proxyBaseUrl}…`);
+  const label = proxyBaseUrl ? proxyBaseUrl : "this Ledgerlens server";
+  setMcpImportStatus(`Scanning local MCP configs via ${label}…`);
 
   try {
     const res = await fetch(`${proxyBaseUrl}/api/mcp-config/discover`);
@@ -851,11 +856,15 @@ async function importLocalMcpServers() {
     const payload = await res.json();
     const servers = Array.isArray(payload.servers) ? payload.servers : [];
     if (servers.length === 0) {
-      setMcpImportStatus("No local MCP server configs were found in VS Code or Claude config files.");
+      setMcpImportStatus(
+        "No MCP server configs were found. Looked for VS Code, GitHub Copilot CLI, Claude (Desktop/Code), Cursor, Windsurf, Continue, Roo, Cline and Zed config files. " +
+        "Add servers in those clients (or set LEDGERLENS_MCP_CONFIGS) and retry."
+      );
       return;
     }
 
     let imported = 0;
+    let skipped = 0;
 
     for (const server of servers) {
       try {
@@ -884,19 +893,24 @@ async function importLocalMcpServers() {
           imported += session ? 1 : 0;
         }
       } catch {
-        // Skip individual servers that fail to connect.
+        skipped++;
       }
     }
 
     renderMcpServerList();
+    const detail = skipped > 0 ? ` (${skipped} skipped — check the server's command is on PATH)` : "";
     setMcpImportStatus(
       imported > 0
-        ? `Imported ${imported} local MCP server${imported === 1 ? "" : "s"} using ${proxyBaseUrl}.`
-        : "Local MCP configs were found, but none could be connected. Make sure the local bridge and referenced commands are available.",
+        ? `Imported ${imported} MCP server${imported === 1 ? "" : "s"}${detail}.`
+        : `Found ${servers.length} server${servers.length === 1 ? "" : "s"} but none could be connected${detail}.`,
       imported === 0,
     );
   } catch (err) {
-    setMcpImportStatus(`Could not import local MCP configs. Start the local bridge with \"npm run start:mcp-bridge\" and retry. ${err.message}`, true);
+    setMcpImportStatus(
+      `Could not reach the MCP discovery endpoint at ${label}. ` +
+      `Make sure the Ledgerlens local server is running (run \`ledgerlens\`). ${err.message}`,
+      true,
+    );
   }
 }
 

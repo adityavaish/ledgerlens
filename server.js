@@ -11,6 +11,7 @@ const { createOfficeSsoMiddleware } = require("./src/server/office-sso-middlewar
 const { createCopilotMiddleware } = require("./src/server/copilot-proxy.js");
 const { createStdioProxyMiddleware } = require("./src/server/mcp-stdio-proxy.js");
 const { createKustoLocalMiddleware } = require("./src/server/kusto-local-proxy.js");
+const { createMcpConfigDiscoveryMiddleware } = require("./src/server/mcp-config-discovery.js");
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -77,6 +78,7 @@ app.use(createOfficeSsoMiddleware());
 app.use(createCopilotMiddleware());
 app.use(createStdioProxyMiddleware());
 app.use(createKustoLocalMiddleware());
+app.use(createMcpConfigDiscoveryMiddleware());
 
 // Serve built static assets
 app.use(express.static(path.join(__dirname, "dist")));
