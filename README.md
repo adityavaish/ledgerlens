@@ -55,7 +55,7 @@ Power users who already have Node.js 22+ can run the installer directly from a P
 iwr -UseBasicParsing https://raw.githubusercontent.com/adityavaish/pivot/main/scripts/install.ps1 | iex
 ```
 
-This downloads the latest release into `%LOCALAPPDATA%\pivot\versions\<version>`, drops a `pivot` shim into `%LOCALAPPDATA%\Programs\pivot` (added to your user `PATH`), and creates Start-menu + Desktop shortcuts.
+This downloads the latest release into `%LOCALAPPDATA%\pivot\versions\<version>`, drops a `pivot` shim into `%LOCALAPPDATA%\Programs\pivot` (added to your user `PATH`), and creates Start-menu + Desktop shortcuts. It also installs Node.js 22+ (via `winget`) and the [GitHub Copilot CLI](https://www.npmjs.com/package/@github/copilot) (`npm install -g @github/copilot`) if either is missing. Sign in to Copilot once with `copilot auth login`.
 
 ### Run
 

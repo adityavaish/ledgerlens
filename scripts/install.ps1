@@ -59,6 +59,31 @@ if (-not $nodeVer) {
     Ok "Node.js $nodeVer installed"
 }
 
+# 2b. Ensure GitHub Copilot CLI is installed globally. Pivot's chat surface
+# is powered by the Copilot SDK, and several power-user shortcuts in the
+# add-in shell out to the standalone `copilot` binary. We install the
+# package globally so it lands on PATH alongside Node. Idempotent: skipped
+# when `copilot` is already resolvable.
+$copilotCmd = Get-Command copilot -ErrorAction SilentlyContinue
+if (-not $copilotCmd) {
+    Step "Installing GitHub Copilot CLI (npm i -g @github/copilot, ~220 MB)..."
+    try {
+        & npm install -g @github/copilot --no-audit --no-fund --loglevel=error 2>&1 |
+            Where-Object { $_ -notmatch '^npm (warn|notice)' -and $_ -notmatch '^\s*$' } |
+            ForEach-Object { Write-Host "    $_" }
+        if ($LASTEXITCODE -ne 0) { throw "npm install -g @github/copilot exited with $LASTEXITCODE" }
+        # Refresh this session's PATH so the subsequent dep-install step (and
+        # any later launcher invocation in this same window) can see the
+        # newly-shimmed `copilot` command.
+        $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+    } catch {
+        Warn "Could not install @github/copilot automatically: $($_.Exception.Message)"
+        Warn "You can install it later with: npm install -g @github/copilot"
+    }
+} else {
+    Ok "GitHub Copilot CLI detected ($($copilotCmd.Source))"
+}
+
 # 3. Resolve latest release on GitHub.
 Step "Looking up the latest Pivot release..."
 $headers = @{ 'User-Agent' = 'pivot-installer'; 'Accept' = 'application/vnd.github+json' }
@@ -176,4 +201,8 @@ Write-Host ""
 Write-Host " The first launch may ask you to trust a local development"  -ForegroundColor DarkGray
 Write-Host " certificate so the add-in can talk to the local server."   -ForegroundColor DarkGray
 Write-Host " Click 'Yes' when Windows prompts you."                     -ForegroundColor DarkGray
+Write-Host ""
+Write-Host " GitHub Copilot CLI was installed. If you haven't signed in yet," -ForegroundColor DarkGray
+Write-Host " open a terminal and run:  copilot auth login"                    -ForegroundColor DarkGray
+Write-Host ""
 Write-Host ""
