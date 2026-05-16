@@ -2,48 +2,75 @@
 #
 # Downloads the latest release tarball from GitHub, extracts it into
 # %LOCALAPPDATA%\ledgerlens\versions\<version>, drops a launcher CMD shim
-# into %LOCALAPPDATA%\Programs\ledgerlens, and adds that folder to the
-# current-user PATH. After install, open a fresh terminal and run:
+# into %LOCALAPPDATA%\Programs\ledgerlens, creates Start-menu + Desktop
+# shortcuts, and adds the bin dir to the current-user PATH. After install,
+# the user clicks "Ledgerlens" in their Start menu to launch.
 #
-#     ledgerlens
-#
-# Re-run this installer any time to pick up the latest version manually,
-# although the launcher itself self-updates on every run.
+# Designed to be SmartScreen-friendly and runnable by non-technical users.
+# Auto-installs Node.js via winget if missing.
 
 $ErrorActionPreference = 'Stop'
 $repo = 'adityavaish/ledgerlens'
 
-function Step($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
+function Step($msg)    { Write-Host "  -> $msg" -ForegroundColor Cyan }
+function Ok($msg)      { Write-Host "  OK $msg" -ForegroundColor Green }
+function Warn($msg)    { Write-Host "  !  $msg" -ForegroundColor Yellow }
+function Fail($msg)    { Write-Host "  X  $msg" -ForegroundColor Red }
 
 # 1. Resolve install dirs.
 $installDir = Join-Path $env:LOCALAPPDATA 'ledgerlens'
 $binDir     = Join-Path $env:LOCALAPPDATA 'Programs\ledgerlens'
+$startMenu  = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
+$desktop    = [Environment]::GetFolderPath('Desktop')
 New-Item -ItemType Directory -Force -Path $installDir, $binDir | Out-Null
 
-# 2. Require Node.js >= 22.
-$nodeVer = $null
-try { $nodeVer = (& node --version 2>$null).Trim() } catch {}
-if (-not $nodeVer -or [int]($nodeVer -replace '^v(\d+).*','$1') -lt 22) {
-    Write-Host ""
-    Write-Host "Ledgerlens requires Node.js 22 or later." -ForegroundColor Yellow
-    Write-Host "Install it from https://nodejs.org/ (or via winget):"
-    Write-Host "    winget install OpenJS.NodeJS.LTS"
-    Write-Host ""
-    exit 1
+# 2. Ensure Node.js 22+ is available. Try winget if missing.
+function Get-NodeVersion {
+    try { $v = (& node --version 2>$null).Trim(); return $v } catch { return $null }
 }
-Step "node $nodeVer detected"
 
-# 3. Look up the latest release.
-Step "querying github.com/$repo for latest release"
+$nodeVer = Get-NodeVersion
+if ($nodeVer) {
+    $major = [int]($nodeVer -replace '^v(\d+).*','$1')
+    if ($major -lt 22) {
+        Warn "Node.js $nodeVer is too old; need 22+. Will attempt to upgrade."
+        $nodeVer = $null
+    } else {
+        Ok "Node.js $nodeVer detected"
+    }
+}
+
+if (-not $nodeVer) {
+    Step "Node.js 22+ is required. Installing via winget..."
+    try {
+        & winget install --id OpenJS.NodeJS.LTS --silent --accept-package-agreements --accept-source-agreements 2>&1 | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw "winget exited with $LASTEXITCODE" }
+    } catch {
+        Fail "Could not install Node.js automatically. Please install it from https://nodejs.org/ and re-run this installer."
+        exit 1
+    }
+    # winget puts node in a new PATH entry; refresh this session's PATH so we see it.
+    $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+    $nodeVer = Get-NodeVersion
+    if (-not $nodeVer) {
+        Fail "Node.js install completed but `node` is not on PATH yet. Please restart this terminal and re-run."
+        exit 1
+    }
+    Ok "Node.js $nodeVer installed"
+}
+
+# 3. Resolve latest release on GitHub.
+Step "Looking up the latest Ledgerlens release..."
 $headers = @{ 'User-Agent' = 'ledgerlens-installer'; 'Accept' = 'application/vnd.github+json' }
 $rel = Invoke-RestMethod -UseBasicParsing -Uri "https://api.github.com/repos/$repo/releases/latest" -Headers $headers
 $version = ($rel.tag_name -as [string]) -replace '^v',''
 $asset = $rel.assets | Where-Object { $_.name -match '\.tgz$' } | Select-Object -First 1
 $downloadUrl = if ($asset) { $asset.browser_download_url } else { $rel.tarball_url }
-if (-not $downloadUrl) { throw "Could not find a release asset to download." }
-Step "downloading v$version"
+if (-not $downloadUrl) { throw 'Could not find a release asset to download.' }
+Ok "Latest release is v$version"
 
-# 4. Download + extract via tar (Windows 10+ ships bsdtar; gzip auto-detected).
+# 4. Download + extract.
+Step "Downloading v$version..."
 $versionsDir = Join-Path $installDir 'versions'
 $targetDir   = Join-Path $versionsDir $version
 New-Item -ItemType Directory -Force -Path $versionsDir, $targetDir | Out-Null
@@ -51,31 +78,29 @@ $tmpTar = Join-Path $env:TEMP "ledgerlens-$version.tgz"
 Invoke-WebRequest -UseBasicParsing -Uri $downloadUrl -OutFile $tmpTar -Headers $headers
 & tar -xzf $tmpTar -C $targetDir --strip-components=1
 Remove-Item $tmpTar -Force
+Ok "Extracted to $targetDir"
 
-# 4b. Install runtime npm dependencies in the extracted version. The
-# release tarball ships package.json + package-lock.json but not
-# node_modules; without this step the server boots and immediately fails
-# with "Cannot find module 'express'".
-Step "installing runtime dependencies (this is a one-time step per release)"
+# 5. Install runtime npm dependencies. Shipping node_modules in the tarball
+# would balloon the download; running `npm install --omit=dev` once after
+# extract gives the same effect for ~140 KB on the wire.
+Step "Installing runtime dependencies (about a minute)..."
 Push-Location $targetDir
 try {
-    & npm install --omit=dev --no-audit --no-fund --loglevel=error 2>&1 | Out-Host
-    if ($LASTEXITCODE -ne 0) {
-        throw "npm install failed with exit code $LASTEXITCODE"
-    }
+    & npm install --omit=dev --no-audit --no-fund --loglevel=error 2>&1 |
+        Where-Object { $_ -notmatch '^npm (warn|notice)' -and $_ -notmatch '^\s*$' } |
+        ForEach-Object { Write-Host "    $_" }
+    if ($LASTEXITCODE -ne 0) { throw "npm install failed with exit code $LASTEXITCODE" }
 } finally {
     Pop-Location
 }
+Ok "Dependencies installed"
 
-# 5. Pin "current" to the just-installed version.
+# 6. Pin "current" to the just-installed version.
 $current = @{ version = $version; path = $targetDir; installedAt = (Get-Date).ToString('o') } | ConvertTo-Json
 Set-Content -Path (Join-Path $installDir 'current.json') -Value $current -Encoding UTF8
 
-# 6. Write a stable dispatcher + .cmd shim. Pinning the shim to a
-# specific version directory means auto-updates don't take effect
-# (the shim keeps running the old launcher). The dispatcher reads
-# `current.json` on every invocation so whatever version the launcher
-# most recently installed is the one that actually runs.
+# 7. Stable dispatcher + .cmd shim. The dispatcher reads current.json each
+# launch so future auto-updates take effect without re-running the installer.
 $dispatcher = @"
 const fs = require('fs');
 const path = require('path');
@@ -86,12 +111,12 @@ let cur;
 try {
   cur = JSON.parse(fs.readFileSync(path.join(installDir, 'current.json'), 'utf8'));
 } catch (err) {
-  console.error('[ledgerlens] no current.json at ' + installDir + ' — reinstall with https://github.com/adityavaish/ledgerlens');
+  console.error('[ledgerlens] no current.json at ' + installDir + ' \u2014 reinstall from https://github.com/adityavaish/ledgerlens');
   process.exit(1);
 }
 const launcher = path.join(cur.path, 'bin', 'ledgerlens.js');
 if (!fs.existsSync(launcher)) {
-  console.error('[ledgerlens] launcher missing at ' + launcher + ' — reinstall.');
+  console.error('[ledgerlens] launcher missing at ' + launcher + ' \u2014 reinstall.');
   process.exit(1);
 }
 const r = spawnSync(process.execPath, [launcher, ...process.argv.slice(2)], { stdio: 'inherit', shell: false });
@@ -99,21 +124,49 @@ process.exit(r.status == null ? 1 : r.status);
 "@
 Set-Content -Path (Join-Path $binDir 'ledgerlens-dispatch.js') -Value $dispatcher -Encoding UTF8
 
-$shim = @"
-@echo off
-node "%LOCALAPPDATA%\Programs\ledgerlens\ledgerlens-dispatch.js" %*
-"@
+$shim = "@echo off`r`nnode `"%LOCALAPPDATA%\Programs\ledgerlens\ledgerlens-dispatch.js`" %*`r`n"
 Set-Content -Path (Join-Path $binDir 'ledgerlens.cmd') -Value $shim -Encoding ASCII
 
-# 7. Add the bin dir to the current-user PATH if not already on it.
+# 8. Add bin to user PATH for ad-hoc terminal use.
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
 if (-not (($userPath -split ';') -contains $binDir)) {
     [Environment]::SetEnvironmentVariable('Path', ($userPath.TrimEnd(';') + ';' + $binDir), 'User')
-    Step "added $binDir to your user PATH (open a new terminal to pick it up)"
+    Ok "Added $binDir to your user PATH"
 }
 
-Step "ledgerlens v$version installed at $targetDir"
+# 9. Create Start menu + Desktop shortcuts pointing at ledgerlens.cmd so
+# non-technical users can launch from familiar places. Uses the WScript
+# Shell COM API which is present on every Windows install.
+function New-LedgerlensShortcut($linkPath, $description) {
+    $shellApp = New-Object -ComObject WScript.Shell
+    $lnk = $shellApp.CreateShortcut($linkPath)
+    $lnk.TargetPath       = (Join-Path $binDir 'ledgerlens.cmd')
+    $lnk.WorkingDirectory = $binDir
+    $lnk.IconLocation     = (Join-Path $targetDir 'dist\assets\icon-32.png')
+    $lnk.Description      = $description
+    $lnk.Save()
+}
+
+$startLink   = Join-Path $startMenu 'Ledgerlens.lnk'
+$desktopLink = Join-Path $desktop   'Ledgerlens.lnk'
+New-LedgerlensShortcut -linkPath $startLink   -description 'Ledgerlens AI assistant for Excel'
+New-LedgerlensShortcut -linkPath $desktopLink -description 'Ledgerlens AI assistant for Excel'
+Ok "Start menu and desktop shortcuts created"
+
 Write-Host ""
-Write-Host "Run it with:  ledgerlens"
-Write-Host "Source/docs:  https://github.com/$repo"
+Write-Host "========================================================" -ForegroundColor Green
+Write-Host " Ledgerlens v$version is installed!"                       -ForegroundColor Green
+Write-Host "========================================================" -ForegroundColor Green
+Write-Host ""
+Write-Host " To start it:" -ForegroundColor White
+Write-Host "   * Double-click 'Ledgerlens' on your desktop, OR"
+Write-Host "   * Open the Start menu and search for 'Ledgerlens'."
+Write-Host ""
+Write-Host " Excel will open automatically with the Ledgerlens" -ForegroundColor White
+Write-Host " add-in installed. Click the Ledgerlens button on the"
+Write-Host " Home tab to open the chat panel."
+Write-Host ""
+Write-Host " The first launch may ask you to trust a local development"  -ForegroundColor DarkGray
+Write-Host " certificate so the add-in can talk to the local server."   -ForegroundColor DarkGray
+Write-Host " Click 'Yes' when Windows prompts you."                     -ForegroundColor DarkGray
 Write-Host ""

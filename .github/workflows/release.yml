@@ -66,3 +66,4 @@ jobs:
           files: |
             ledgerlens-${{ steps.ver.outputs.version }}.tgz
             scripts/install.ps1
+            scripts/Install-Ledgerlens.cmd

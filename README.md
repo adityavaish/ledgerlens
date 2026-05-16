@@ -45,13 +45,17 @@ scripts/install.ps1            one-line installer (PowerShell)
 manifest.xml.template          host-substituted at launch time
 ```
 
-### Install (one line, Windows + PowerShell)
+### Install (Windows)
+
+The easiest way is the [**Ledgerlens install page**](https://adityavaish.github.io/ledgerlens/) — click **Install for Windows**, run the downloaded `Install-Ledgerlens.cmd`, then launch from the Start-menu shortcut it creates.
+
+Power users who already have Node.js 22+ can run the installer directly from a PowerShell prompt:
 
 ```pwsh
 iwr -UseBasicParsing https://raw.githubusercontent.com/adityavaish/ledgerlens/main/scripts/install.ps1 | iex
 ```
 
-This downloads the latest release into `%LOCALAPPDATA%\ledgerlens\versions\<version>` and adds a `ledgerlens` shim to `%LOCALAPPDATA%\Programs\ledgerlens` (added to your user `PATH`). Requires Node.js ≥ 22 (`winget install OpenJS.NodeJS.LTS`).
+This downloads the latest release into `%LOCALAPPDATA%\ledgerlens\versions\<version>`, drops a `ledgerlens` shim into `%LOCALAPPDATA%\Programs\ledgerlens` (added to your user `PATH`), and creates Start-menu + Desktop shortcuts.
 
 ### Run
 
