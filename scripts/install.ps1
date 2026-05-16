@@ -71,10 +71,37 @@ try {
 $current = @{ version = $version; path = $targetDir; installedAt = (Get-Date).ToString('o') } | ConvertTo-Json
 Set-Content -Path (Join-Path $installDir 'current.json') -Value $current -Encoding UTF8
 
-# 6. Write a launcher CMD shim that invokes node on bin\ledgerlens.js.
+# 6. Write a stable dispatcher + .cmd shim. Pinning the shim to a
+# specific version directory means auto-updates don't take effect
+# (the shim keeps running the old launcher). The dispatcher reads
+# `current.json` on every invocation so whatever version the launcher
+# most recently installed is the one that actually runs.
+$dispatcher = @"
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const installDir = process.env.LEDGERLENS_HOME ||
+  (process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'ledgerlens') : path.join(require('os').homedir(), '.ledgerlens'));
+let cur;
+try {
+  cur = JSON.parse(fs.readFileSync(path.join(installDir, 'current.json'), 'utf8'));
+} catch (err) {
+  console.error('[ledgerlens] no current.json at ' + installDir + ' — reinstall with https://github.com/adityavaish/ledgerlens');
+  process.exit(1);
+}
+const launcher = path.join(cur.path, 'bin', 'ledgerlens.js');
+if (!fs.existsSync(launcher)) {
+  console.error('[ledgerlens] launcher missing at ' + launcher + ' — reinstall.');
+  process.exit(1);
+}
+const r = spawnSync(process.execPath, [launcher, ...process.argv.slice(2)], { stdio: 'inherit', shell: false });
+process.exit(r.status == null ? 1 : r.status);
+"@
+Set-Content -Path (Join-Path $binDir 'ledgerlens-dispatch.js') -Value $dispatcher -Encoding UTF8
+
 $shim = @"
 @echo off
-node "$targetDir\bin\ledgerlens.js" %*
+node "%LOCALAPPDATA%\Programs\ledgerlens\ledgerlens-dispatch.js" %*
 "@
 Set-Content -Path (Join-Path $binDir 'ledgerlens.cmd') -Value $shim -Encoding ASCII
 
