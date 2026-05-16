@@ -100,6 +100,9 @@
       text-decoration: none;
       border-radius: var(--radius);
       transition: transform 0.1s ease, box-shadow 0.2s ease, background 0.15s ease;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
     }
     .cta.primary {
       background: var(--brand);
@@ -121,6 +124,24 @@
       border-color: var(--brand);
       color: var(--brand);
     }
+    .cta.copy.copied {
+      background: var(--brand);
+      color: #07241a;
+      border-color: var(--brand);
+    }
+    .open-tip {
+      max-width: 540px;
+      margin: 16px auto 0;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--brand);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--text-soft);
+      text-align: left;
+    }
+    .open-tip strong { color: var(--text); }
     .platform-note {
       margin-top: 16px;
       color: var(--text-soft);
