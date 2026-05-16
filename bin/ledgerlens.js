@@ -216,21 +216,21 @@ function trySideloadIntoExcel(versionDir, manifestPath) {
     return false;
   }
 
+  // Excel reads HKCU\Software\Microsoft\Office\16.0\Wef\Developer\<DisplayName>
+  // on every cold start to surface developer add-ins. Setting just our
+  // per-add-in value is sufficient; the sibling EnableDebugging /
+  // UseEdgeChromium / RuntimeLogging values are machine-wide debugger
+  // hooks (responsible for the 'Debug Event-based handler' prompt) that
+  // we *deliberately* don't touch — they belong to whoever last ran an
+  // SDK-style debug session, not us.
   const wefDeveloper = "HKCU\\Software\\Microsoft\\Office\\16.0\\Wef\\Developer";
-  const writes = [
-    ["Ledgerlens",      "REG_SZ",    manifestPath],
-    ["EnableDebugging", "REG_DWORD", "1"],
-    ["UseEdgeChromium", "REG_DWORD", "1"],
-  ];
-  for (const [name, type, data] of writes) {
-    const r = spawnSync("reg", ["add", wefDeveloper, "/v", name, "/t", type, "/d", data, "/f"], {
-      stdio: "ignore",
-      shell: false,
-    });
-    if (r.status !== 0) {
-      warn("could not write " + name + " under " + wefDeveloper);
-      return false;
-    }
+  const r = spawnSync("reg", ["add", wefDeveloper, "/v", "Ledgerlens", "/t", "REG_SZ", "/d", manifestPath, "/f"], {
+    stdio: "ignore",
+    shell: false,
+  });
+  if (r.status !== 0) {
+    warn("could not write Ledgerlens under " + wefDeveloper);
+    return false;
   }
   log("registered Ledgerlens developer add-in");
 
