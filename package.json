@@ -13,6 +13,7 @@
     "dist/",
     "scripts/",
     "src/server/",
+    "assets/",
     "server.js",
     "manifest.xml.template",
     "manifest.xml",

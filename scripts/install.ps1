@@ -140,12 +140,17 @@ if (-not (($userPath -split ';') -contains $binDir)) {
 # non-technical users can launch from familiar places. Uses the WScript
 # Shell COM API which is present on every Windows install.
 function New-LedgerlensShortcut($linkPath, $description) {
+    # Shortcuts launch via wscript -> the silent VBS launcher -> the tray
+    # PowerShell host. Result: clicking the shortcut shows no console
+    # window at all; the user only sees the system-tray icon + Excel.
     $shellApp = New-Object -ComObject WScript.Shell
     $lnk = $shellApp.CreateShortcut($linkPath)
-    $lnk.TargetPath       = (Join-Path $binDir 'ledgerlens.cmd')
-    $lnk.WorkingDirectory = $binDir
-    $lnk.IconLocation     = (Join-Path $targetDir 'dist\assets\icon-32.png')
+    $lnk.TargetPath       = "$env:WINDIR\System32\wscript.exe"
+    $lnk.Arguments        = '"' + (Join-Path $targetDir 'bin\ledgerlens-tray.vbs') + '"'
+    $lnk.WorkingDirectory = $targetDir
+    $lnk.IconLocation     = (Join-Path $targetDir 'assets\icon-128.png')
     $lnk.Description      = $description
+    $lnk.WindowStyle      = 7  # Minimized; wscript itself is windowless so this is just a hint.
     $lnk.Save()
 }
 
