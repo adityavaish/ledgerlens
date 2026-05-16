@@ -3,22 +3,50 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
   <title>Ledgerlens — AI assistant in Excel</title>
   <meta name="description" content="Local-only AI add-in for Microsoft Excel. Talk to your spreadsheets, pull data from Kusto and other sources, build charts and pivots with natural language. One-click installer for Windows." />
   <link rel="icon" href="https://raw.githubusercontent.com/adityavaish/ledgerlens/main/assets/icon-32.png" />
   <style>
     :root {
-      --brand: #217346;
-      --brand-dark: #18532f;
+      --brand: #10b981;
+      --brand-dark: #047857;
       --bg: #fafafa;
       --bg-card: #ffffff;
       --text: #1f2933;
       --text-soft: #6b7280;
       --line: #e5e7eb;
+      --code-bg: #f3f4f6;
+      --warn-bg: #fff8e1;
+      --warn-border: #f6c000;
+      --warn-text: #5a4400;
+      --warn-strong: #3b2c00;
       --radius: 12px;
-      --shadow: 0 8px 32px rgba(0,0,0,0.08);
-      --shadow-lg: 0 16px 48px rgba(0,0,0,0.14);
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.14);
+      --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --brand: #34d399;
+        --brand-dark: #10b981;
+        --bg: #0d1117;
+        --bg-card: #161b22;
+        --text: #e6edf3;
+        --text-soft: #8b949e;
+        --line: #30363d;
+        --code-bg: #21262d;
+        --warn-bg: #2a1f00;
+        --warn-border: #f5b400;
+        --warn-text: #fcd34d;
+        --warn-strong: #fef3c7;
+        --shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+        --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);
+        --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.35);
+      }
+    }
+
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
@@ -52,9 +80,8 @@
     .tagline {
       font-size: 20px;
       color: var(--text-soft);
-      margin: 0;
-      max-width: 620px;
       margin: 0 auto;
+      max-width: 620px;
     }
     .cta-row {
       display: flex;
@@ -72,15 +99,16 @@
       font-weight: 600;
       text-decoration: none;
       border-radius: var(--radius);
-      transition: transform 0.1s ease, box-shadow 0.2s ease;
+      transition: transform 0.1s ease, box-shadow 0.2s ease, background 0.15s ease;
     }
     .cta.primary {
       background: var(--brand);
-      color: #fff;
+      color: #07241a;
       box-shadow: var(--shadow);
     }
     .cta.primary:hover {
       background: var(--brand-dark);
+      color: #ffffff;
       transform: translateY(-1px);
       box-shadow: var(--shadow-lg);
     }
@@ -104,7 +132,7 @@
       border-radius: var(--radius);
       padding: 32px;
       margin-bottom: 24px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      box-shadow: var(--shadow-card);
     }
     section.card h2 {
       margin: 0 0 16px;
@@ -118,20 +146,21 @@
       margin-bottom: 12px;
     }
     .smartscreen-warn {
-      background: #fff8e1;
-      border-left: 4px solid #f6c000;
+      background: var(--warn-bg);
+      border-left: 4px solid var(--warn-border);
       padding: 16px 20px;
       border-radius: 8px;
       margin: 20px 0;
-      color: #5a4400;
+      color: var(--warn-text);
     }
-    .smartscreen-warn strong { color: #3b2c00; }
+    .smartscreen-warn strong { color: var(--warn-strong); }
     code, .mono {
       font-family: "Cascadia Mono", "JetBrains Mono", "Consolas", monospace;
       font-size: 13px;
-      background: #f3f4f6;
+      background: var(--code-bg);
       padding: 2px 6px;
       border-radius: 4px;
+      color: var(--text);
     }
     .features {
       display: grid;
@@ -163,9 +192,71 @@
     footer a {
       color: var(--text-soft);
       margin: 0 8px;
+      text-decoration: none;
     }
+    footer a:hover { color: var(--brand); }
+    .muted { color: var(--text-soft); }
   </style>
 </head>
+<body>
+  <main>
+    <header class="hero">
+      <img class="logo" src="https://raw.githubusercontent.com/adityavaish/ledgerlens/main/assets/icon-128.png" alt="Ledgerlens" />
+      <h1>Ledgerlens</h1>
+      <p class="tagline">AI assistant inside Excel for finance and accounting teams. Pull data, run analyses, and build reports with natural language — all running locally on your machine.</p>
+
+      <div class="cta-row">
+        <a class="cta primary" href="https://github.com/adityavaish/ledgerlens/releases/latest/download/Install-Ledgerlens.cmd">
+          ↓ Install for Windows
+        </a>
+        <a class="cta secondary" href="https://github.com/adityavaish/ledgerlens">View on GitHub</a>
+      </div>
+      <p class="platform-note">Windows 10 or 11 · Excel desktop required · Free &amp; open source</p>
+    </header>
+
+    <section class="card">
+      <h2>How to install</h2>
+      <ol>
+        <li><strong>Download</strong> by clicking the "Install for Windows" button above.</li>
+        <li><strong>Run</strong> the downloaded <span class="mono">Install-Ledgerlens.cmd</span> file (double-click).</li>
+        <li>The installer will set up everything — Node.js (if not already installed), the Ledgerlens app, and a shortcut on your Start menu and desktop. Takes about a minute.</li>
+        <li>Click <strong>Ledgerlens</strong> on your desktop. Excel will open with the add-in loaded.</li>
+        <li>Click the Ledgerlens button on the Home tab of Excel to open the chat panel.</li>
+      </ol>
+
+      <div class="smartscreen-warn">
+        <strong>About the Windows warning:</strong> The first time you run the installer, Windows SmartScreen may show <em>"Windows protected your PC"</em>. This appears because the file hasn't been digitally signed yet. To proceed: click <strong>More info</strong>, then <strong>Run anyway</strong>. The installer only writes to your own user folder — no admin rights required.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>What it does</h2>
+      <div class="features">
+        <div class="feature"><h3>Natural-language Excel</h3><p>Generate data, build pivots, format ranges, and write formulas just by describing what you want.</p></div>
+        <div class="feature"><h3>Azure Data Explorer</h3><p>Query Kusto clusters directly from a worksheet — signs you in with your own account via your browser.</p></div>
+        <div class="feature"><h3>BYO MCP servers</h3><p>Automatically imports MCP servers you already configured in VS Code, GitHub Copilot CLI, Claude, Cursor, Windsurf, and more.</p></div>
+        <div class="feature"><h3>Runs locally</h3><p>The server runs on your laptop. Your data and queries never go to a shared cloud host.</p></div>
+        <div class="feature"><h3>Auto-updates</h3><p>Every launch quietly checks for a new release on GitHub and upgrades in place. Skip with one env var if you'd rather control updates.</p></div>
+        <div class="feature"><h3>Open source</h3><p>MIT-licensed, every line on GitHub. Fork it, audit it, or send a pull request.</p></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Updating &amp; uninstalling</h2>
+      <p style="margin-top:0;"><strong>Update:</strong> Ledgerlens checks GitHub Releases for a newer version every time you launch it; no action needed.</p>
+      <p><strong>Uninstall:</strong> Delete the <span class="mono">%LOCALAPPDATA%\ledgerlens</span> and <span class="mono">%LOCALAPPDATA%\Programs\ledgerlens</span> folders, and remove the Start-menu and desktop shortcuts. That's everything.</p>
+    </section>
+
+    <footer>
+      <a href="https://github.com/adityavaish/ledgerlens">Source</a>·
+      <a href="https://github.com/adityavaish/ledgerlens/issues">Issues</a>·
+      <a href="https://github.com/adityavaish/ledgerlens/releases">Releases</a>·
+      <a href="https://github.com/adityavaish/ledgerlens/blob/main/LICENSE">MIT License</a>
+    </footer>
+  </main>
+</body>
+</html>
+
 <body>
   <main>
     <header class="hero">
