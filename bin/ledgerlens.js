@@ -194,16 +194,22 @@ async function ensureOfficeDevCerts(versionDir) {
 }
 
 function trySideloadIntoExcel(versionDir, manifestPath) {
-  const localBin = path.join(versionDir, "node_modules", ".bin",
-    process.platform === "win32" ? "office-addin-debugging.cmd" : "office-addin-debugging");
-  if (fs.existsSync(localBin)) {
+  // office-addin-debugging ships a .cmd shim on Windows. Node.js >=18 (post
+  // CVE-2024-27980) refuses to spawn .cmd/.bat with shell:false, and it
+  // fails *silently* with a non-zero exit and no output. Invoke the JS
+  // entry through the current Node binary so we don't depend on the shim.
+  const cliJs = path.join(versionDir, "node_modules", "office-addin-debugging", "cli.js");
+  if (fs.existsSync(cliJs)) {
     log("sideloading manifest into Excel desktop");
-    const res = spawnSync(localBin, ["start", manifestPath, "desktop"], { stdio: "inherit", shell: false });
+    const res = spawnSync(process.execPath, [cliJs, "start", manifestPath, "desktop"], {
+      stdio: "inherit",
+      shell: false,
+    });
     if (res.status === 0) return true;
-    warn("sideload returned non-zero status — Excel may need to be restarted or the manifest sideloaded manually.");
+    warn("sideload returned non-zero status (" + res.status + ") — close Excel completely and rerun, or sideload manually: " + manifestPath);
     return false;
   }
-  warn("office-addin-debugging not found; sideload manually: " + manifestPath);
+  warn("office-addin-debugging not installed; sideload manually: " + manifestPath);
   return false;
 }
 async function main() {
