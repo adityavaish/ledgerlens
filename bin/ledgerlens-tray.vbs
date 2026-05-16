@@ -21,10 +21,17 @@ End If
 ' Tiny JSON-ish path extraction. The file is written by us in a known
 ' shape, so regex on "path": "<value>" is sufficient and avoids a
 ' dependency on a JSON parser inside cscript.
-With fso.OpenTextFile(curPath, 1, False, -1)
-    raw = .ReadAll
-    .Close
-End With
+' Read current.json as UTF-8. VBScript's FileSystemObject can only do
+' ASCII or UTF-16, but our installer writes UTF-8 (without BOM). Use
+' ADODB.Stream which supports an explicit charset.
+Dim stream
+Set stream = CreateObject("ADODB.Stream")
+stream.Type = 2          ' adTypeText
+stream.Charset = "utf-8"
+stream.Open
+stream.LoadFromFile curPath
+raw = stream.ReadText
+stream.Close
 
 Dim re, m
 Set re = New RegExp
