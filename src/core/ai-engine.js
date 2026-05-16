@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — AI Engine.
+ * Pivot — AI Engine.
  * Orchestrates: gather context → call AI → execute action → respond.
  * This is the brain that connects the UI, AI service, connectors, and Excel ops.
  */
@@ -251,7 +251,7 @@ class AIEngine {
           try {
             await this._dispatch(sub);
           } catch (err) {
-            console.error(`[Ledgerlens] multi_action step ${i + 1} (${sub.action}) failed:`, err.message);
+            console.error(`[Pivot] multi_action step ${i + 1} (${sub.action}) failed:`, err.message);
             errors.push(`Step ${i + 1} (${sub.action}): ${err.message}`);
           }
         }

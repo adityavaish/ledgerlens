@@ -1,16 +1,16 @@
-# Ledgerlens — one-line installer (Windows / PowerShell).
+# Pivot — one-line installer (Windows / PowerShell).
 #
 # Downloads the latest release tarball from GitHub, extracts it into
-# %LOCALAPPDATA%\ledgerlens\versions\<version>, drops a launcher CMD shim
-# into %LOCALAPPDATA%\Programs\ledgerlens, creates Start-menu + Desktop
+# %LOCALAPPDATA%\pivot\versions\<version>, drops a launcher CMD shim
+# into %LOCALAPPDATA%\Programs\pivot, creates Start-menu + Desktop
 # shortcuts, and adds the bin dir to the current-user PATH. After install,
-# the user clicks "Ledgerlens" in their Start menu to launch.
+# the user clicks "Pivot" in their Start menu to launch.
 #
 # Designed to be SmartScreen-friendly and runnable by non-technical users.
 # Auto-installs Node.js via winget if missing.
 
 $ErrorActionPreference = 'Stop'
-$repo = 'adityavaish/ledgerlens'
+$repo = 'adityavaish/pivot'
 
 function Step($msg)    { Write-Host "  -> $msg" -ForegroundColor Cyan }
 function Ok($msg)      { Write-Host "  OK $msg" -ForegroundColor Green }
@@ -18,8 +18,8 @@ function Warn($msg)    { Write-Host "  !  $msg" -ForegroundColor Yellow }
 function Fail($msg)    { Write-Host "  X  $msg" -ForegroundColor Red }
 
 # 1. Resolve install dirs.
-$installDir = Join-Path $env:LOCALAPPDATA 'ledgerlens'
-$binDir     = Join-Path $env:LOCALAPPDATA 'Programs\ledgerlens'
+$installDir = Join-Path $env:LOCALAPPDATA 'pivot'
+$binDir     = Join-Path $env:LOCALAPPDATA 'Programs\pivot'
 $startMenu  = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
 $desktop    = [Environment]::GetFolderPath('Desktop')
 New-Item -ItemType Directory -Force -Path $installDir, $binDir | Out-Null
@@ -60,8 +60,8 @@ if (-not $nodeVer) {
 }
 
 # 3. Resolve latest release on GitHub.
-Step "Looking up the latest Ledgerlens release..."
-$headers = @{ 'User-Agent' = 'ledgerlens-installer'; 'Accept' = 'application/vnd.github+json' }
+Step "Looking up the latest Pivot release..."
+$headers = @{ 'User-Agent' = 'pivot-installer'; 'Accept' = 'application/vnd.github+json' }
 $rel = Invoke-RestMethod -UseBasicParsing -Uri "https://api.github.com/repos/$repo/releases/latest" -Headers $headers
 $version = ($rel.tag_name -as [string]) -replace '^v',''
 $asset = $rel.assets | Where-Object { $_.name -match '\.tgz$' } | Select-Object -First 1
@@ -74,7 +74,7 @@ Step "Downloading v$version..."
 $versionsDir = Join-Path $installDir 'versions'
 $targetDir   = Join-Path $versionsDir $version
 New-Item -ItemType Directory -Force -Path $versionsDir, $targetDir | Out-Null
-$tmpTar = Join-Path $env:TEMP "ledgerlens-$version.tgz"
+$tmpTar = Join-Path $env:TEMP "pivot-$version.tgz"
 Invoke-WebRequest -UseBasicParsing -Uri $downloadUrl -OutFile $tmpTar -Headers $headers
 & tar -xzf $tmpTar -C $targetDir --strip-components=1
 Remove-Item $tmpTar -Force
@@ -105,29 +105,29 @@ $dispatcher = @"
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const installDir = process.env.LEDGERLENS_HOME ||
-  (process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'ledgerlens') : path.join(require('os').homedir(), '.ledgerlens'));
+const installDir = process.env.PIVOT_HOME ||
+  (process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'pivot') : path.join(require('os').homedir(), '.pivot'));
 let cur;
 try {
   let _raw = fs.readFileSync(path.join(installDir, 'current.json'), 'utf8');
   if (_raw.charCodeAt(0) === 0xFEFF) _raw = _raw.slice(1);
   cur = JSON.parse(_raw);
 } catch (err) {
-  console.error('[ledgerlens] no current.json at ' + installDir + ' \u2014 reinstall from https://github.com/adityavaish/ledgerlens');
+  console.error('[pivot] no current.json at ' + installDir + ' \u2014 reinstall from https://github.com/adityavaish/pivot');
   process.exit(1);
 }
-const launcher = path.join(cur.path, 'bin', 'ledgerlens.js');
+const launcher = path.join(cur.path, 'bin', 'pivot.js');
 if (!fs.existsSync(launcher)) {
-  console.error('[ledgerlens] launcher missing at ' + launcher + ' \u2014 reinstall.');
+  console.error('[pivot] launcher missing at ' + launcher + ' \u2014 reinstall.');
   process.exit(1);
 }
 const r = spawnSync(process.execPath, [launcher, ...process.argv.slice(2)], { stdio: 'inherit', shell: false });
 process.exit(r.status == null ? 1 : r.status);
 "@
-[System.IO.File]::WriteAllText((Join-Path $binDir 'ledgerlens-dispatch.js'), $dispatcher, (New-Object System.Text.UTF8Encoding $false))
+[System.IO.File]::WriteAllText((Join-Path $binDir 'pivot-dispatch.js'), $dispatcher, (New-Object System.Text.UTF8Encoding $false))
 
-$shim = "@echo off`r`nnode `"%LOCALAPPDATA%\Programs\ledgerlens\ledgerlens-dispatch.js`" %*`r`n"
-Set-Content -Path (Join-Path $binDir 'ledgerlens.cmd') -Value $shim -Encoding ASCII
+$shim = "@echo off`r`nnode `"%LOCALAPPDATA%\Programs\pivot\pivot-dispatch.js`" %*`r`n"
+Set-Content -Path (Join-Path $binDir 'pivot.cmd') -Value $shim -Encoding ASCII
 
 # 8. Add bin to user PATH for ad-hoc terminal use.
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
@@ -136,17 +136,17 @@ if (-not (($userPath -split ';') -contains $binDir)) {
     Ok "Added $binDir to your user PATH"
 }
 
-# 9. Create Start menu + Desktop shortcuts pointing at ledgerlens.cmd so
+# 9. Create Start menu + Desktop shortcuts pointing at pivot.cmd so
 # non-technical users can launch from familiar places. Uses the WScript
 # Shell COM API which is present on every Windows install.
-function New-LedgerlensShortcut($linkPath, $description) {
+function New-PivotShortcut($linkPath, $description) {
     # Shortcuts launch via wscript -> the silent VBS launcher -> the tray
     # PowerShell host. Result: clicking the shortcut shows no console
     # window at all; the user only sees the system-tray icon + Excel.
     $shellApp = New-Object -ComObject WScript.Shell
     $lnk = $shellApp.CreateShortcut($linkPath)
     $lnk.TargetPath       = "$env:WINDIR\System32\wscript.exe"
-    $lnk.Arguments        = '"' + (Join-Path $targetDir 'bin\ledgerlens-tray.vbs') + '"'
+    $lnk.Arguments        = '"' + (Join-Path $targetDir 'bin\pivot-tray.vbs') + '"'
     $lnk.WorkingDirectory = $targetDir
     $lnk.IconLocation     = (Join-Path $targetDir 'assets\icon-128.png')
     $lnk.Description      = $description
@@ -154,23 +154,23 @@ function New-LedgerlensShortcut($linkPath, $description) {
     $lnk.Save()
 }
 
-$startLink   = Join-Path $startMenu 'Ledgerlens.lnk'
-$desktopLink = Join-Path $desktop   'Ledgerlens.lnk'
-New-LedgerlensShortcut -linkPath $startLink   -description 'Ledgerlens AI assistant for Excel'
-New-LedgerlensShortcut -linkPath $desktopLink -description 'Ledgerlens AI assistant for Excel'
+$startLink   = Join-Path $startMenu 'Pivot.lnk'
+$desktopLink = Join-Path $desktop   'Pivot.lnk'
+New-PivotShortcut -linkPath $startLink   -description 'Pivot AI assistant for Excel'
+New-PivotShortcut -linkPath $desktopLink -description 'Pivot AI assistant for Excel'
 Ok "Start menu and desktop shortcuts created"
 
 Write-Host ""
 Write-Host "========================================================" -ForegroundColor Green
-Write-Host " Ledgerlens v$version is installed!"                       -ForegroundColor Green
+Write-Host " Pivot v$version is installed!"                       -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " To start it:" -ForegroundColor White
-Write-Host "   * Double-click 'Ledgerlens' on your desktop, OR"
-Write-Host "   * Open the Start menu and search for 'Ledgerlens'."
+Write-Host "   * Double-click 'Pivot' on your desktop, OR"
+Write-Host "   * Open the Start menu and search for 'Pivot'."
 Write-Host ""
-Write-Host " Excel will open automatically with the Ledgerlens" -ForegroundColor White
-Write-Host " add-in installed. Click the Ledgerlens button on the"
+Write-Host " Excel will open automatically with the Pivot" -ForegroundColor White
+Write-Host " add-in installed. Click the Pivot button on the"
 Write-Host " Home tab to open the chat panel."
 Write-Host ""
 Write-Host " The first launch may ask you to trust a local development"  -ForegroundColor DarkGray

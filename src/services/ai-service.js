@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — AI Service (GitHub Copilot SDK).
+ * Pivot — AI Service (GitHub Copilot SDK).
  * Thin client that calls the server-side Copilot proxy at /api/chat.
  * The proxy manages CopilotClient sessions using the user's GitHub auth.
  */

@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — Production server.
+ * Pivot — Production server.
  * Serves the built static front-end and mounts the API proxy middlewares
  * that were previously embedded in webpack-dev-server.
  */
@@ -32,7 +32,7 @@ const PORT = process.env.PORT || 3002;
  * handshake failures with no observable cert error.
  */
 function tryGetHttpsOptions() {
-  if (process.env.LEDGERLENS_FORCE_HTTP === "1") return null;
+  if (process.env.PIVOT_FORCE_HTTP === "1") return null;
   const certsDir = path.join(process.env.USERPROFILE || process.env.HOME || ".", ".office-addin-dev-certs");
   const keyPath = path.join(certsDir, "localhost.key");
   const crtPath = path.join(certsDir, "localhost.crt");
@@ -60,15 +60,15 @@ app.use((_req, res, next) => {
 });
 
 function getRuntimeConfig() {
-  const clientId = process.env.LEDGERLENS_CLIENT_ID || "";
-  const appIdUri = process.env.LEDGERLENS_APP_ID_URI || (clientId ? `api://${clientId}` : "");
+  const clientId = process.env.PIVOT_CLIENT_ID || "";
+  const appIdUri = process.env.PIVOT_APP_ID_URI || (clientId ? `api://${clientId}` : "");
   return {
     clientId,
-    tenantId: process.env.LEDGERLENS_TENANT_ID || "common",
-    redirectUri: process.env.LEDGERLENS_REDIRECT_URI || `http://localhost:${PORT}/taskpane.html`,
+    tenantId: process.env.PIVOT_TENANT_ID || "common",
+    redirectUri: process.env.PIVOT_REDIRECT_URI || `http://localhost:${PORT}/taskpane.html`,
     appIdUri,
     apiScope: appIdUri ? `${appIdUri}/access_as_user` : "",
-    naaEnabled: process.env.LEDGERLENS_ENABLE_NAA === "true",
+    naaEnabled: process.env.PIVOT_ENABLE_NAA === "true",
   };
 }
 
@@ -80,7 +80,7 @@ app.get("/health", (_req, res) => {
 // reference it from M365 Centralized Deployment, users can sideload via
 // "Upload My Add-in" → URL in Office on the web, and CI can publish updates
 // without re-distributing the file.
-const MANIFEST_PATHS = ["/manifest.xml", "/manifest", "/ledgerlens.xml"];
+const MANIFEST_PATHS = ["/manifest.xml", "/manifest", "/pivot.xml"];
 app.get(MANIFEST_PATHS, (_req, res) => {
   const manifestPath = path.join(__dirname, "manifest.xml");
   fs.stat(manifestPath, (err, stat) => {
@@ -93,7 +93,7 @@ app.get(MANIFEST_PATHS, (_req, res) => {
     res.setHeader("Last-Modified", stat.mtime.toUTCString());
     res.setHeader(
       "Content-Disposition",
-      'inline; filename="ledgerlens-manifest.xml"'
+      'inline; filename="pivot-manifest.xml"'
     );
     fs.createReadStream(manifestPath).pipe(res);
   });
@@ -122,10 +122,10 @@ app.get("*", (_req, res) => {
 const httpsOpts = tryGetHttpsOptions();
 if (httpsOpts) {
   https.createServer(httpsOpts, app).listen(PORT, () => {
-    console.log(`Ledgerlens server listening on https://localhost:${PORT}`);
+    console.log(`Pivot server listening on https://localhost:${PORT}`);
   });
 } else {
   http.createServer(app).listen(PORT, () => {
-    console.log(`Ledgerlens server listening on http://localhost:${PORT} (HTTPS disabled — Office sideload will be unavailable)`);
+    console.log(`Pivot server listening on http://localhost:${PORT} (HTTPS disabled — Office sideload will be unavailable)`);
   });
 }

@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — REST API Connector.
+ * Pivot — REST API Connector.
  * Fetches data from any REST/JSON endpoint.
  * Auth token obtained via MSAL if scopes are provided.
  */

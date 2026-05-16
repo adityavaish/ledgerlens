@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — MCP Client.
+ * Pivot — MCP Client.
  * Implements the Model Context Protocol (MCP) client with support for:
  *   - Streamable HTTP transport (current spec)
  *   - Legacy SSE transport (older servers)
@@ -11,7 +11,7 @@
  */
 
 const MCP_VERSION = "2025-03-26";
-const CLIENT_INFO = { name: "ledgerlens-excel-addin", version: "1.0.0" };
+const CLIENT_INFO = { name: "pivot-excel-addin", version: "1.0.0" };
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_BASE_DELAY_MS = 1000;
 

@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — Connector Registry.
+ * Pivot — Connector Registry.
  * Central registry for all data-source connectors.
  * Supports runtime registration (pluggable architecture).
  */

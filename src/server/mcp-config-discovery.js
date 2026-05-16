@@ -28,7 +28,7 @@ function readJsonIfExists(filePath) {
  *   - Continue.dev                (~/.continue/config.json)
  *   - Roo Code / Cline / Zed      common defaults
  *
- * Users can plug in extra absolute paths via LEDGERLENS_MCP_CONFIGS
+ * Users can plug in extra absolute paths via PIVOT_MCP_CONFIGS
  * (semicolon- or comma-separated) for anything not covered here.
  */
 function getCandidateConfigFiles() {
@@ -81,7 +81,7 @@ function getCandidateConfigFiles() {
 
   // Allow operators / power users to point at extra config files without
   // needing a code change. Accept either ";" or "," as separators.
-  const extra = String(process.env.LEDGERLENS_MCP_CONFIGS || "")
+  const extra = String(process.env.PIVOT_MCP_CONFIGS || "")
     .split(/[;,]/)
     .map((s) => s.trim())
     .filter(Boolean);
@@ -173,7 +173,7 @@ function createMcpConfigDiscoveryMiddleware() {
     },
   };
 
-  console.log("[Ledgerlens] MCP config discovery endpoint registered: /api/mcp-config/discover");
+  console.log("[Pivot] MCP config discovery endpoint registered: /api/mcp-config/discover");
 
   return function mcpConfigDiscovery(req, res, next) {
     const key = `${req.method} ${req.url}`;

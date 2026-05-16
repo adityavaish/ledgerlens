@@ -1,20 +1,20 @@
 /**
- * Ledgerlens — Plugin API.
+ * Pivot — Plugin API.
  * Public extensibility surface for third-party integrations.
  *
- * Usage (from a script loaded after Ledgerlens):
+ * Usage (from a script loaded after Pivot):
  *
  *   // Register a custom connector
- *   Ledgerlens.registerConnector(new MyCustomConnector());
+ *   Pivot.registerConnector(new MyCustomConnector());
  *
  *   // Register a custom action handler
- *   Ledgerlens.registerAction("my_action", async (params) => { ... });
+ *   Pivot.registerAction("my_action", async (params) => { ... });
  *
  *   // Execute a command programmatically
- *   const result = await Ledgerlens.execute("Generate a table of products");
+ *   const result = await Pivot.execute("Generate a table of products");
  *
  *   // Access services
- *   const token = await Ledgerlens.auth.getToken(["User.Read"]);
+ *   const token = await Pivot.auth.getToken(["User.Read"]);
  */
 
 import aiEngine from "../core/ai-engine.js";
@@ -86,7 +86,7 @@ const PivotAPI = {
 
   /**
    * MCP server management.
-   * Connect to any MCP server to extend Ledgerlens with external tools.
+   * Connect to any MCP server to extend Pivot with external tools.
    */
   mcp: {
     /** Connect to an MCP server. Returns the session with discovered tools. */
@@ -138,7 +138,7 @@ export function getCustomAction(name) {
 
 // Expose on window for external scripts
 if (typeof window !== "undefined") {
-  window.Ledgerlens = PivotAPI;
+  window.Pivot = PivotAPI;
 }
 
 export default PivotAPI;

@@ -1,4 +1,4 @@
-# ledgerlens — design notes
+# pivot — design notes
 
 ## Personas
 - **Accountant / Controller** — runs close, needs fast pulls of TB / JE detail with drill-through to source rows.
@@ -18,4 +18,4 @@
 
 ## Non-goals (initial)
 - Writing journal entries back to the ERP.
-- Replacing the close checklist tool — ledgerlens augments, not replaces.
+- Replacing the close checklist tool — pivot augments, not replaces.

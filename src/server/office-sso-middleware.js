@@ -12,12 +12,12 @@ let joseModulePromise = null;
 let jwksCache = new Map();
 
 function getNaaConfig() {
-  const clientId = process.env.LEDGERLENS_CLIENT_ID || "";
-  const appIdUri = process.env.LEDGERLENS_APP_ID_URI || (clientId ? `api://${clientId}` : "");
+  const clientId = process.env.PIVOT_CLIENT_ID || "";
+  const appIdUri = process.env.PIVOT_APP_ID_URI || (clientId ? `api://${clientId}` : "");
   return {
-    enabled: process.env.LEDGERLENS_ENABLE_NAA === "true",
+    enabled: process.env.PIVOT_ENABLE_NAA === "true",
     clientId,
-    tenantId: process.env.LEDGERLENS_TENANT_ID || "",
+    tenantId: process.env.PIVOT_TENANT_ID || "",
     appIdUri,
   };
 }
@@ -84,7 +84,7 @@ function createOfficeSsoMiddleware() {
     if (!config.clientId || !config.tenantId || !config.appIdUri) {
       writeJson(res, 503, {
         error: "naa_not_configured",
-        message: "NAA is enabled, but the server is missing LEDGERLENS_CLIENT_ID, LEDGERLENS_TENANT_ID, or LEDGERLENS_APP_ID_URI.",
+        message: "NAA is enabled, but the server is missing PIVOT_CLIENT_ID, PIVOT_TENANT_ID, or PIVOT_APP_ID_URI.",
       });
       return;
     }

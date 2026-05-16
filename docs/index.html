@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
-  <title>Ledgerlens — AI assistant in Excel</title>
+  <title>Pivot — AI assistant in Excel</title>
   <meta name="description" content="Local-only AI add-in for Microsoft Excel. Talk to your spreadsheets, pull data from Kusto and other sources, build charts and pivots with natural language. One-click installer for Windows." />
-  <link rel="icon" href="https://raw.githubusercontent.com/adityavaish/ledgerlens/main/assets/icon-32.png" />
+  <link rel="icon" href="https://raw.githubusercontent.com/adityavaish/pivot/main/assets/icon-32.png" />
   <style>
     :root {
       --brand: #10b981;
@@ -118,19 +118,19 @@
 <body>
   <main>
     <header class="hero">
-      <img class="logo" src="https://raw.githubusercontent.com/adityavaish/ledgerlens/main/assets/icon-128.png" alt="Ledgerlens" />
-      <h1>Ledgerlens</h1>
+      <img class="logo" src="https://raw.githubusercontent.com/adityavaish/pivot/main/assets/icon-128.png" alt="Pivot" />
+      <h1>Pivot</h1>
       <p class="tagline">AI assistant inside Excel for finance and accounting teams. Pull data, run analyses, and build reports with natural language — all running locally on your machine.</p>
 
       <div class="cta-row">
-        <a class="cta primary" href="https://github.com/adityavaish/ledgerlens/releases/latest/download/Install-Ledgerlens.cmd">
+        <a class="cta primary" href="https://github.com/adityavaish/pivot/releases/latest/download/Install-Pivot.cmd">
           ↓ Install for Windows
         </a>
         <button class="cta secondary copy" type="button" id="copy-cmd" aria-label="Copy PowerShell install command to clipboard">
           <span class="copy-default">⎘ Copy install command</span>
           <span class="copy-done" hidden>✓ Copied! Paste into PowerShell</span>
         </button>
-        <a class="cta secondary" href="https://github.com/adityavaish/ledgerlens">View on GitHub</a>
+        <a class="cta secondary" href="https://github.com/adityavaish/pivot">View on GitHub</a>
       </div>
       <p class="open-tip">
         <strong>Tip:</strong> when your browser shows the download, click <strong>Open</strong> on its download notification instead of going to your Downloads folder — the installer will run straight from there.
@@ -141,11 +141,11 @@
     <section class="card">
       <h2>How to install</h2>
       <ol>
-        <li><strong>Click "Install for Windows"</strong> above. Your browser will download <span class="mono">Install-Ledgerlens.cmd</span>.</li>
+        <li><strong>Click "Install for Windows"</strong> above. Your browser will download <span class="mono">Install-Pivot.cmd</span>.</li>
         <li><strong>Click "Open"</strong> on the browser's download notification (or double-click the file in your Downloads folder). The installer runs in a small console window.</li>
-        <li>Wait about a minute while it sets up Node.js (if you don't already have it), the Ledgerlens app, and Start-menu + Desktop shortcuts.</li>
-        <li>Click <strong>Ledgerlens</strong> on your desktop or Start menu. Excel will open with the add-in loaded.</li>
-        <li>Click the Ledgerlens button on the Home tab of Excel to open the chat panel.</li>
+        <li>Wait about a minute while it sets up Node.js (if you don't already have it), the Pivot app, and Start-menu + Desktop shortcuts.</li>
+        <li>Click <strong>Pivot</strong> on your desktop or Start menu. Excel will open with the add-in loaded.</li>
+        <li>Click the Pivot button on the Home tab of Excel to open the chat panel.</li>
       </ol>
 
       <div class="smartscreen-warn">
@@ -171,15 +171,15 @@
 
     <section class="card">
       <h2>Updating &amp; uninstalling</h2>
-      <p style="margin-top:0;"><strong>Update:</strong> Ledgerlens checks GitHub Releases for a newer version every time you launch it; no action needed.</p>
-      <p><strong>Uninstall:</strong> Delete the <span class="mono">%LOCALAPPDATA%\ledgerlens</span> and <span class="mono">%LOCALAPPDATA%\Programs\ledgerlens</span> folders, and remove the Start-menu and desktop shortcuts. That's everything.</p>
+      <p style="margin-top:0;"><strong>Update:</strong> Pivot checks GitHub Releases for a newer version every time you launch it; no action needed.</p>
+      <p><strong>Uninstall:</strong> Delete the <span class="mono">%LOCALAPPDATA%\pivot</span> and <span class="mono">%LOCALAPPDATA%\Programs\pivot</span> folders, and remove the Start-menu and desktop shortcuts. That's everything.</p>
     </section>
 
     <footer>
-      <a href="https://github.com/adityavaish/ledgerlens">Source</a>·
-      <a href="https://github.com/adityavaish/ledgerlens/issues">Issues</a>·
-      <a href="https://github.com/adityavaish/ledgerlens/releases">Releases</a>·
-      <a href="https://github.com/adityavaish/ledgerlens/blob/main/LICENSE">MIT License</a>
+      <a href="https://github.com/adityavaish/pivot">Source</a>·
+      <a href="https://github.com/adityavaish/pivot/issues">Issues</a>·
+      <a href="https://github.com/adityavaish/pivot/releases">Releases</a>·
+      <a href="https://github.com/adityavaish/pivot/blob/main/LICENSE">MIT License</a>
     </footer>
   </main>
 
@@ -189,7 +189,7 @@
     (function () {
       var btn = document.getElementById("copy-cmd");
       if (!btn) return;
-      var cmd = "iwr -UseBasicParsing https://raw.githubusercontent.com/adityavaish/ledgerlens/main/scripts/install.ps1 | iex";
+      var cmd = "iwr -UseBasicParsing https://raw.githubusercontent.com/adityavaish/pivot/main/scripts/install.ps1 | iex";
       var defaultEl = btn.querySelector(".copy-default");
       var doneEl    = btn.querySelector(".copy-done");
 

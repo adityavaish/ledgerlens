@@ -1,8 +1,8 @@
 /**
- * Ledgerlens — Azure Data Explorer (Kusto) Connector.
+ * Pivot — Azure Data Explorer (Kusto) Connector.
  *
  * Posts to the local /api/kusto/* endpoints. The server runs on the user's
- * machine (started by `bin/ledgerlens.js`) and uses azure-kusto-data's
+ * machine (started by `bin/pivot.js`) and uses azure-kusto-data's
  * `withUserPrompt` to authenticate the user via their default browser —
  * no Entra app registration, no admin consent, no managed identity.
  */

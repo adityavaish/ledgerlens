@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — Base Connector.
+ * Pivot — Base Connector.
  * All data-source connectors extend this class.
  * Provides the contract that the connector registry and AI engine rely on.
  */

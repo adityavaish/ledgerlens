@@ -1,6 +1,6 @@
-' Ledgerlens silent tray launcher.
+' Pivot silent tray launcher.
 ' Spawns the PowerShell tray host with NO console window at all.
-' Resolves the current version dir from %LOCALAPPDATA%\ledgerlens\current.json
+' Resolves the current version dir from %LOCALAPPDATA%\pivot\current.json
 ' so it always invokes the latest installed tray.ps1.
 
 Option Explicit
@@ -9,12 +9,12 @@ Dim shell, fso, installDir, curPath, raw, json, versionPath, trayPs1, cmd
 Set shell = CreateObject("WScript.Shell")
 Set fso   = CreateObject("Scripting.FileSystemObject")
 
-installDir = shell.ExpandEnvironmentStrings("%LOCALAPPDATA%\ledgerlens")
+installDir = shell.ExpandEnvironmentStrings("%LOCALAPPDATA%\pivot")
 curPath    = installDir & "\current.json"
 
 If Not fso.FileExists(curPath) Then
-    MsgBox "Ledgerlens is not installed. Reinstall from https://adityavaish.github.io/ledgerlens/", _
-           vbExclamation, "Ledgerlens"
+    MsgBox "Pivot is not installed. Reinstall from https://adityavaish.github.io/pivot/", _
+           vbExclamation, "Pivot"
     WScript.Quit 1
 End If
 
@@ -38,8 +38,8 @@ Set re = New RegExp
 re.Pattern    = """path""\s*:\s*""([^""]+)"""
 re.IgnoreCase = True
 If Not re.Test(raw) Then
-    MsgBox "Could not find current Ledgerlens install path in " & curPath, _
-           vbExclamation, "Ledgerlens"
+    MsgBox "Could not find current Pivot install path in " & curPath, _
+           vbExclamation, "Pivot"
     WScript.Quit 1
 End If
 Set m = re.Execute(raw)
@@ -48,7 +48,7 @@ versionPath = Replace(versionPath, "\\", "\")
 
 trayPs1 = versionPath & "\bin\tray.ps1"
 If Not fso.FileExists(trayPs1) Then
-    MsgBox "Ledgerlens tray script not found: " & trayPs1, vbExclamation, "Ledgerlens"
+    MsgBox "Pivot tray script not found: " & trayPs1, vbExclamation, "Pivot"
     WScript.Quit 1
 End If
 

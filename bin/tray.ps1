@@ -1,15 +1,15 @@
-# Ledgerlens — system-tray host (Windows).
+# Pivot — system-tray host (Windows).
 #
-# Spawns `node bin\ledgerlens.js` as a hidden child process and surfaces
+# Spawns `node bin\pivot.js` as a hidden child process and surfaces
 # the local server through a system-tray icon. Menu items:
 #
 #   * Open Excel
 #   * Open chat (browser)
 #   * Show logs
 #   * About
-#   * Stop Ledgerlens
+#   * Stop Pivot
 #
-# Run via the .cmd shim:  ledgerlens-tray.cmd
+# Run via the .cmd shim:  pivot-tray.cmd
 # That shim uses `powershell -WindowStyle Hidden` so no console is shown.
 
 param(
@@ -21,16 +21,20 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # ─── Paths ───────────────────────────────────────────────────────────────
-$installDir = if ($env:LEDGERLENS_HOME) {
+$installDir = if ($env:PIVOT_HOME) {
+    $env:PIVOT_HOME
+} elseif ($env:LEDGERLENS_HOME) {
+    # Fall back to the previous brand's env var so v1.1.x upgraders
+    # don't lose their state pointer on first launch.
     $env:LEDGERLENS_HOME
 } elseif ($env:LOCALAPPDATA) {
-    Join-Path $env:LOCALAPPDATA 'ledgerlens'
+    Join-Path $env:LOCALAPPDATA 'pivot'
 } else {
-    Join-Path $HOME '.ledgerlens'
+    Join-Path $HOME '.pivot'
 }
 $logDir = Join-Path $installDir 'logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-$logFile = Join-Path $logDir ("ledgerlens-" + (Get-Date -Format 'yyyyMMdd-HHmmss') + ".log")
+$logFile = Join-Path $logDir ("pivot-" + (Get-Date -Format 'yyyyMMdd-HHmmss') + ".log")
 
 # Resolve current version dir from current.json so the tray host always
 # launches whatever the auto-updater most recently installed.
@@ -41,12 +45,12 @@ function Get-CurrentVersionDir {
             $raw = Get-Content $curPath -Raw
             if ($raw.Length -gt 0 -and [int][char]$raw[0] -eq 0xFEFF) { $raw = $raw.Substring(1) }
             $cur = $raw | ConvertFrom-Json
-            if ($cur.path -and (Test-Path (Join-Path $cur.path 'bin\ledgerlens.js'))) {
+            if ($cur.path -and (Test-Path (Join-Path $cur.path 'bin\pivot.js'))) {
                 return $cur.path
             }
         } catch {}
     }
-    if (Test-Path (Join-Path $VersionDir '..\bin\ledgerlens.js')) {
+    if (Test-Path (Join-Path $VersionDir '..\bin\pivot.js')) {
         return (Resolve-Path (Join-Path $VersionDir '..')).Path
     }
     return $null
@@ -55,12 +59,12 @@ function Get-CurrentVersionDir {
 $runDir = Get-CurrentVersionDir
 if (-not $runDir) {
     [System.Windows.Forms.MessageBox]::Show(
-        "Ledgerlens is not installed correctly. Reinstall from https://adityavaish.github.io/ledgerlens/",
-        "Ledgerlens", 'OK', 'Error'
+        "Pivot is not installed correctly. Reinstall from https://adityavaish.github.io/pivot/",
+        "Pivot", 'OK', 'Error'
     ) | Out-Null
     exit 1
 }
-$launcherJs = Join-Path $runDir 'bin\ledgerlens.js'
+$launcherJs = Join-Path $runDir 'bin\pivot.js'
 
 # ─── Spawn the launcher as a hidden child process ────────────────────────
 $psi = New-Object System.Diagnostics.ProcessStartInfo
@@ -75,7 +79,7 @@ $psi.CreateNoWindow         = $true
 # Append-only log file. The async Process events run in PowerShell's
 # background runspace which can't close over $logWriter cleanly, so we
 # pass a synchronized hashtable as -MessageData to share state.
-"[tray] starting ledgerlens launcher: $launcherJs" | Out-File -FilePath $logFile -Append -Encoding utf8
+"[tray] starting pivot launcher: $launcherJs" | Out-File -FilePath $logFile -Append -Encoding utf8
 
 $proc = [System.Diagnostics.Process]::new()
 $proc.StartInfo           = $psi
@@ -114,7 +118,7 @@ $statusTimer.Interval = 500
 $statusTimer.Add_Tick({
     if ($shared.ServerUrl -and -not $script:serverUrl) {
         $script:serverUrl = $shared.ServerUrl
-        $script:trayIcon.Text = "Ledgerlens (running)"
+        $script:trayIcon.Text = "Pivot (running)"
         $script:openChatItem.Enabled = $true
     }
 }.GetNewClosure())
@@ -133,7 +137,7 @@ $script:iconStarting = $script:iconRunning
 
 $script:trayIcon = New-Object System.Windows.Forms.NotifyIcon
 $script:trayIcon.Icon = $script:iconStarting
-$script:trayIcon.Text = "Ledgerlens (starting...)"
+$script:trayIcon.Text = "Pivot (starting...)"
 $script:trayIcon.Visible = $true
 
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
@@ -142,9 +146,9 @@ $script:openChatItem = $menu.Items.Add("Open chat in browser")
 $script:openChatItem.Enabled = $false
 [void]$menu.Items.Add('-')
 $showLogs = $menu.Items.Add("Show logs")
-$about    = $menu.Items.Add("About Ledgerlens")
+$about    = $menu.Items.Add("About Pivot")
 [void]$menu.Items.Add('-')
-$stop     = $menu.Items.Add("Stop Ledgerlens")
+$stop     = $menu.Items.Add("Stop Pivot")
 $script:trayIcon.ContextMenuStrip = $menu
 
 # ─── Menu handlers ───────────────────────────────────────────────────────
@@ -162,8 +166,8 @@ $showLogs.Add_Click({
 
 $about.Add_Click({
     [System.Windows.Forms.MessageBox]::Show(
-        "Ledgerlens`nLocal AI assistant for Microsoft Excel.`n`nhttps://github.com/adityavaish/ledgerlens",
-        "About Ledgerlens", 'OK', 'Information'
+        "Pivot`nLocal AI assistant for Microsoft Excel.`n`nhttps://github.com/adityavaish/pivot",
+        "About Pivot", 'OK', 'Information'
     ) | Out-Null
 }.GetNewClosure())
 
@@ -176,7 +180,7 @@ $stopHandler = {
         }
         # Best-effort registry cleanup (launcher does the same on graceful exit,
         # but if it was killed forcibly the entry may linger).
-        cmd /c "reg delete `"HKCU\Software\Microsoft\Office\16.0\Wef\Developer`" /v Ledgerlens /f >nul 2>&1" | Out-Null
+        cmd /c "reg delete `"HKCU\Software\Microsoft\Office\16.0\Wef\Developer`" /v Pivot /f >nul 2>&1" | Out-Null
     } finally {
         [System.Windows.Forms.Application]::Exit()
     }
@@ -191,7 +195,7 @@ Register-ObjectEvent -InputObject $proc -EventName Exited -Action {
 } | Out-Null
 
 # Brief balloon so the user knows the app is running, then runs silently.
-$script:trayIcon.BalloonTipTitle = "Ledgerlens is starting"
+$script:trayIcon.BalloonTipTitle = "Pivot is starting"
 $script:trayIcon.BalloonTipText  = "Excel will open in a moment. Right-click the tray icon for options."
 $script:trayIcon.ShowBalloonTip(3000)
 

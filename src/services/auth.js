@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — MSAL-based authentication service.
+ * Pivot — MSAL-based authentication service.
  * Handles user sign-in via Microsoft Entra ID and token management
  * for accessing Microsoft Graph and custom data connectors.
  */
@@ -168,7 +168,7 @@ class AuthService {
     const runtimeConfig = await this.getRuntimeConfig();
     if (!runtimeConfig.clientId || runtimeConfig.clientId === "YOUR_APP_CLIENT_ID") {
       throw new Error(
-        "Sign-in is not configured: the server is missing LEDGERLENS_CLIENT_ID. Set it on the App Service and reload."
+        "Sign-in is not configured: the server is missing PIVOT_CLIENT_ID. Set it on the App Service and reload."
       );
     }
 

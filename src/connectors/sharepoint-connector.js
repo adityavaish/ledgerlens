@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — SharePoint Connector.
+ * Pivot — SharePoint Connector.
  * Reads SharePoint lists via Microsoft Graph, authenticated with MSAL.
  */
 

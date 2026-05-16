@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — Copilot SDK Proxy.
+ * Pivot — Copilot SDK Proxy.
  * Runs server-side inside webpack-dev-server.
  *
  * Manages a CopilotClient + session and exposes HTTP endpoints
@@ -20,7 +20,7 @@ async function loadSDK() {
 }
 
 // ── System Prompt (moved from ai-service.js — lives server-side now) ────
-const SYSTEM_PROMPT = `You are Ledgerlens, an AI assistant embedded in Excel for finance and accounting teams. You help users explore corporate accounting data — trial balances, journal entries, GL detail, AP/AR aging, revenue and expense analysis, variance reviews, and reconciliations. When the user's intent is ambiguous, prefer a finance interpretation (e.g. "balance" → account balance; "aging" → AR/AP aging buckets; "period" → accounting period). Respond ONLY with valid JSON (no fences):
+const SYSTEM_PROMPT = `You are Pivot, an AI assistant embedded in Excel for finance and accounting teams. You help users explore corporate accounting data — trial balances, journal entries, GL detail, AP/AR aging, revenue and expense analysis, variance reviews, and reconciliations. When the user's intent is ambiguous, prefer a finance interpretation (e.g. "balance" → account balance; "aging" → AR/AP aging buckets; "period" → accounting period). Respond ONLY with valid JSON (no fences):
 {"action":"<action>","params":{...},"message":"<short confirmation>"}
 
 Actions: generate_data({headers,rows,startCell}), update_data({range,values}), create_table({range,name,hasHeaders}), create_chart({type,dataRange,title}), create_pivot({sourceRange,rows,columns,values}), format_range({range,format}), format_columns({columns:["A","B"],format}), conditional_format({range,rule,values,format}), insert_formula({cell,formula}), fill_formulas({startCell,formula,fillDown}), sort_data({range,column,ascending}), filter_data({range,column,criteria}), merge_cells({range}), add_sheet({name}), rename_sheet({oldName,newName}), delete_range({range}), freeze_panes({row,column}), auto_fit({range}), find_replace({find,replace,range}), validate_data({range,type,values}), hide_columns({columns:["A","B"]}), show_columns({columns:["A","B"]}), hide_rows({rows:[1,2,3]}), show_rows({rows:[1,2,3]}), fetch_data({connector,query,startCell}), query_and_display({connector,query,message}), gather_data({connector,query}), mcp_tool({serverId,toolName,args,startCell}), multi_action({actions:[...]}), explain(no params), error(no params).
@@ -62,7 +62,7 @@ Rules:
 // ── State ───────────────────────────────────────────────────────────────
 let client = null;
 let session = null;
-let currentModel = process.env.LEDGERLENS_COPILOT_MODEL || "claude-opus-4.6";
+let currentModel = process.env.PIVOT_COPILOT_MODEL || "claude-opus-4.6";
 
 function isHostedEnvironment() {
   return Boolean(
@@ -225,17 +225,17 @@ async function sendWithRetry(prompt, retries = 1) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     const sess = await getSession();
     try {
-      console.log(`[Ledgerlens] Sending to Copilot (attempt ${attempt + 1})…`);
+      console.log(`[Pivot] Sending to Copilot (attempt ${attempt + 1})…`);
       const start = Date.now();
       const result = await sess.sendAndWait({ prompt }, SEND_TIMEOUT_MS);
-      console.log(`[Ledgerlens] Copilot responded in ${((Date.now() - start) / 1000).toFixed(1)}s`);
+      console.log(`[Pivot] Copilot responded in ${((Date.now() - start) / 1000).toFixed(1)}s`);
       return result;
     } catch (err) {
       const msg = err.message || "";
-      console.error(`[Ledgerlens] Copilot error (attempt ${attempt + 1}): ${msg}`);
+      console.error(`[Pivot] Copilot error (attempt ${attempt + 1}): ${msg}`);
       const isRecoverable = msg.includes("Timeout") || msg.includes("Session not found") || msg.includes("session");
       if (isRecoverable && attempt < retries) {
-        console.warn(`[Ledgerlens] Resetting session and retrying…`);
+        console.warn(`[Pivot] Resetting session and retrying…`);
         await resetSession();
         continue;
       }
@@ -391,7 +391,7 @@ function setupCopilotProxy(app) {
     }));
   });
 
-  console.log("[Ledgerlens] Copilot proxy endpoints registered: /api/chat, /api/configure, /api/reset, /api/status");
+  console.log("[Pivot] Copilot proxy endpoints registered: /api/chat, /api/configure, /api/reset, /api/status");
 }
 
 /**
@@ -475,7 +475,7 @@ function createCopilotMiddleware() {
      */
     "POST /api/chat-stream": async (req, res) => {
       const streamStart = Date.now();
-      const log = (msg) => console.log(`[Ledgerlens SSE +${((Date.now() - streamStart) / 1000).toFixed(1)}s] ${msg}`);
+      const log = (msg) => console.log(`[Pivot SSE +${((Date.now() - streamStart) / 1000).toFixed(1)}s] ${msg}`);
 
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
@@ -582,7 +582,7 @@ function createCopilotMiddleware() {
     },
   };
 
-  console.log("[Ledgerlens] Copilot middleware created for: /api/chat, /api/configure, /api/reset, /api/status");
+  console.log("[Pivot] Copilot middleware created for: /api/chat, /api/configure, /api/reset, /api/status");
 
   return function copilotProxy(req, res, next) {
     const key = `${req.method} ${req.url}`;

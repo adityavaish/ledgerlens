@@ -6,6 +6,6 @@
     "location":        { "value": "${AZURE_LOCATION}" },
     "resourceGroupName": { "value": "${AZURE_RESOURCE_GROUP}" },
     "githubToken":     { "value": "${GITHUB_TOKEN}" },
-    "copilotModel":    { "value": "${LEDGERLENS_COPILOT_MODEL=claude-opus-4.6}" }
+    "copilotModel":    { "value": "${PIVOT_COPILOT_MODEL=claude-opus-4.6}" }
   }
 }

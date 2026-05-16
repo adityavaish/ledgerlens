@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.39.26.7824",
-      "templateHash": "136880687935868035"
+      "version": "0.41.2.15936",
+      "templateHash": "988492051443364337"
     }
   },
   "parameters": {
@@ -103,8 +103,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "15697381901574907589"
+              "version": "0.41.2.15936",
+              "templateHash": "3961507243468081759"
             }
           },
           "parameters": {
@@ -204,7 +204,7 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', format('{0}{1}', variables('abbrs').containerRegistryRegistries, parameters('resourceToken')))]",
+              "scope": "[resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', variables('abbrs').containerRegistryRegistries, parameters('resourceToken')))]",
               "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', variables('abbrs').containerRegistryRegistries, parameters('resourceToken'))), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}{1}', variables('abbrs').managedIdentityUserAssignedIdentities, parameters('resourceToken'))), variables('acrPullRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('acrPullRoleId'))]",
@@ -233,7 +233,7 @@
                 "httpsOnly": true,
                 "keyVaultReferenceIdentity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}{1}', variables('abbrs').managedIdentityUserAssignedIdentities, parameters('resourceToken')))]",
                 "siteConfig": {
-                  "linuxFxVersion": "[format('DOCKER|{0}/ledgerlens:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', variables('abbrs').containerRegistryRegistries, parameters('resourceToken'))), '2023-11-01-preview').loginServer)]",
+                  "linuxFxVersion": "[format('DOCKER|{0}/pivot:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', variables('abbrs').containerRegistryRegistries, parameters('resourceToken'))), '2023-11-01-preview').loginServer)]",
                   "acrUseManagedIdentityCreds": true,
                   "acrUserManagedIdentityID": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}{1}', variables('abbrs').managedIdentityUserAssignedIdentities, parameters('resourceToken'))), '2023-01-31').clientId]",
                   "alwaysOn": true,
@@ -270,7 +270,7 @@
                       "value": "[parameters('githubToken')]"
                     },
                     {
-                      "name": "LEDGERLENS_COPILOT_MODEL",
+                      "name": "PIVOT_COPILOT_MODEL",
                       "value": "[parameters('copilotModel')]"
                     },
                     {

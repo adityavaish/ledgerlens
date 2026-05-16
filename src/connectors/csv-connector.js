@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — CSV / File Connector.
+ * Pivot — CSV / File Connector.
  * Parses CSV or TSV data from a URL or pasted text.
  */
 

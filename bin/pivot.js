@@ -8,17 +8,89 @@ const { spawn, spawnSync } = require("child_process");
 const { pipeline } = require("stream/promises");
 const zlib = require("zlib");
 
-const REPO = "adityavaish/ledgerlens";
+const REPO = "adityavaish/pivot";
 const RELEASES_API = "https://api.github.com/repos/" + REPO + "/releases/latest";
-const USER_AGENT = "ledgerlens-launcher";
+const USER_AGENT = "pivot-launcher";
 
-function log(...args) { console.log("[ledgerlens]", ...args); }
-function warn(...args) { console.warn("[ledgerlens]", ...args); }
+function log(...args) { console.log("[pivot]", ...args); }
+function warn(...args) { console.warn("[pivot]", ...args); }
 
 function getInstallDir() {
+  // Honour PIVOT_HOME first; fall back to LEDGERLENS_HOME for users
+  // upgrading from the v1.1.x line (the env var name changed when we
+  // renamed). After that, default to %LOCALAPPDATA%\pivot.
+  if (process.env.PIVOT_HOME) return process.env.PIVOT_HOME;
   if (process.env.LEDGERLENS_HOME) return process.env.LEDGERLENS_HOME;
-  if (process.platform === "win32" && process.env.LOCALAPPDATA) return path.join(process.env.LOCALAPPDATA, "ledgerlens");
-  return path.join(os.homedir(), ".ledgerlens");
+  if (process.platform === "win32" && process.env.LOCALAPPDATA) return path.join(process.env.LOCALAPPDATA, "pivot");
+  return path.join(os.homedir(), ".pivot");
+}
+
+/**
+ * One-shot migration for users coming from Ledgerlens (≤ v1.1.x):
+ *   - Move %LOCALAPPDATA%\ledgerlens → %LOCALAPPDATA%\pivot (if pivot/ is empty)
+ *   - Remove the legacy HKCU\...\Wef\Developer\Ledgerlens registry value
+ *   - Delete legacy Start-menu + Desktop shortcuts
+ *   - Delete %LOCALAPPDATA%\Programs\ledgerlens (old shim folder)
+ * Idempotent: safe to call on every launch (becomes a no-op once migrated).
+ */
+function migrateFromLedgerlens(installDir) {
+  if (process.platform !== "win32") return;
+  const localAppData = process.env.LOCALAPPDATA;
+  if (!localAppData) return;
+
+  const legacyInstall = path.join(localAppData, "ledgerlens");
+  const legacyShims   = path.join(localAppData, "Programs", "ledgerlens");
+  const appData       = process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming");
+  const desktop       = path.join(os.homedir(), "Desktop");
+  const startMenu     = path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs");
+
+  let did = false;
+
+  // 1. Move versions/ + current.json if the destination is empty or stale.
+  if (fs.existsSync(legacyInstall) && legacyInstall !== installDir) {
+    const haveNew = fs.existsSync(path.join(installDir, "current.json"));
+    if (!haveNew) {
+      try {
+        fs.mkdirSync(installDir, { recursive: true });
+        for (const entry of fs.readdirSync(legacyInstall)) {
+          const src = path.join(legacyInstall, entry);
+          const dst = path.join(installDir, entry);
+          if (!fs.existsSync(dst)) {
+            fs.renameSync(src, dst);
+          }
+        }
+        did = true;
+      } catch (err) {
+        warn("could not migrate " + legacyInstall + ": " + err.message);
+      }
+    }
+    try { fs.rmSync(legacyInstall, { recursive: true, force: true }); } catch { /* ignore */ }
+  }
+
+  // 2. Drop the legacy Wef\Developer\Ledgerlens registry value.
+  spawnSync("reg", [
+    "delete", "HKCU\\Software\\Microsoft\\Office\\16.0\\Wef\\Developer",
+    "/v", "Ledgerlens", "/f",
+  ], { stdio: "ignore", shell: false });
+
+  // 3. Drop legacy shortcuts.
+  for (const lnk of [
+    path.join(desktop, "Ledgerlens.lnk"),
+    path.join(startMenu, "Ledgerlens.lnk"),
+  ]) {
+    if (fs.existsSync(lnk)) {
+      try { fs.unlinkSync(lnk); did = true; } catch { /* ignore */ }
+    }
+  }
+
+  // 4. Drop the legacy shim folder. If the user had ledgerlens.cmd on PATH
+  // via that folder, the new installer should have placed pivot.cmd in
+  // %LOCALAPPDATA%\Programs\pivot already.
+  if (fs.existsSync(legacyShims)) {
+    try { fs.rmSync(legacyShims, { recursive: true, force: true }); did = true; } catch { /* ignore */ }
+  }
+
+  if (did) log("migrated state from previous Ledgerlens install");
 }
 
 function loadCurrent(installDir) {
@@ -100,7 +172,7 @@ async function fetchLatestRelease() {
   return { version, downloadUrl, raw: rel };
 }
 async function ensureLatestVersion(installDir) {
-  if (process.env.LEDGERLENS_SKIP_UPDATE === "1") { log("update check skipped"); return loadCurrent(installDir); }
+  if (process.env.PIVOT_SKIP_UPDATE === "1") { log("update check skipped"); return loadCurrent(installDir); }
   let current = loadCurrent(installDir);
   try {
     const latest = await fetchLatestRelease();
@@ -147,7 +219,7 @@ async function ensureLatestVersion(installDir) {
   return current;
 }
 function pickFreePort() {
-  if (process.env.LEDGERLENS_PORT) return Promise.resolve(parseInt(process.env.LEDGERLENS_PORT, 10));
+  if (process.env.PIVOT_PORT) return Promise.resolve(parseInt(process.env.PIVOT_PORT, 10));
   return new Promise((resolve, reject) => {
     const srv = net.createServer();
     srv.unref();
@@ -224,15 +296,15 @@ function trySideloadIntoExcel(versionDir, manifestPath) {
   // we *deliberately* don't touch — they belong to whoever last ran an
   // SDK-style debug session, not us.
   const wefDeveloper = "HKCU\\Software\\Microsoft\\Office\\16.0\\Wef\\Developer";
-  const r = spawnSync("reg", ["add", wefDeveloper, "/v", "Ledgerlens", "/t", "REG_SZ", "/d", manifestPath, "/f"], {
+  const r = spawnSync("reg", ["add", wefDeveloper, "/v", "Pivot", "/t", "REG_SZ", "/d", manifestPath, "/f"], {
     stdio: "ignore",
     shell: false,
   });
   if (r.status !== 0) {
-    warn("could not write Ledgerlens under " + wefDeveloper);
+    warn("could not write Pivot under " + wefDeveloper);
     return false;
   }
-  log("registered Ledgerlens developer add-in");
+  log("registered Pivot developer add-in");
 
   // If Excel is already running, the registry change only takes effect on
   // the next cold start. Tell the user instead of forcing a close.
@@ -241,7 +313,7 @@ function trySideloadIntoExcel(versionDir, manifestPath) {
     shell: false,
   });
   if (tasks.stdout && /EXCEL\.EXE/i.test(tasks.stdout)) {
-    log("Excel is already running. Close every Excel window and reopen it to see Ledgerlens.");
+    log("Excel is already running. Close every Excel window and reopen it to see Pivot.");
     return true;
   }
 
@@ -256,12 +328,13 @@ function unregisterDevAddin() {
   if (process.platform !== "win32") return;
   spawnSync("reg", [
     "delete", "HKCU\\Software\\Microsoft\\Office\\16.0\\Wef\\Developer",
-    "/v", "Ledgerlens", "/f",
+    "/v", "Pivot", "/f",
   ], { stdio: "ignore", shell: false });
 }
 async function main() {
   const installDir = getInstallDir();
   fs.mkdirSync(installDir, { recursive: true });
+  migrateFromLedgerlens(installDir);
   let current = await ensureLatestVersion(installDir);
   let versionDir;
   if (current && fs.existsSync(path.join(current.path, "server.js"))) {
@@ -283,7 +356,7 @@ async function main() {
   log("starting server on " + host);
   const child = spawn(process.execPath, [path.join(versionDir, "server.js")], {
     cwd: versionDir,
-    env: { ...process.env, PORT: String(port), LEDGERLENS_FORCE_HTTP: certsReady ? "" : "1" },
+    env: { ...process.env, PORT: String(port), PIVOT_FORCE_HTTP: certsReady ? "" : "1" },
     stdio: "inherit",
   });
   let stopped = false;
@@ -310,4 +383,4 @@ async function main() {
     log("press Ctrl+C to stop");
   }
 }
-main().catch((err) => { console.error("[ledgerlens] fatal:", err && err.stack ? err.stack : err); process.exit(1); });
+main().catch((err) => { console.error("[pivot] fatal:", err && err.stack ? err.stack : err); process.exit(1); });

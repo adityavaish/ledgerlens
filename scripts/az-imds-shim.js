@@ -155,7 +155,7 @@ async function main() {
     }
   } else if (group === "version" || args.flags.version) {
     process.stdout.write(
-      JSON.stringify({ "azure-cli": "0.0.0-ledgerlens-shim", shim: true })
+      JSON.stringify({ "azure-cli": "0.0.0-pivot-shim", shim: true })
     );
     process.exit(0);
   } else {

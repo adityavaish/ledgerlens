@@ -1,10 +1,10 @@
 @echo off
 REM ===========================================================================
-REM  Ledgerlens - Bootstrap Installer
+REM  Pivot - Bootstrap Installer
 REM
-REM  Double-click this file to install Ledgerlens. It will:
+REM  Double-click this file to install Pivot. It will:
 REM    1. Make sure Node.js 22+ is installed (uses `winget` if needed).
-REM    2. Download the latest Ledgerlens release from GitHub.
+REM    2. Download the latest Pivot release from GitHub.
 REM    3. Set up Start-menu + Desktop shortcuts you can use to launch it.
 REM
 REM  No admin rights are required for the install itself - everything goes into
@@ -15,18 +15,18 @@ REM ===========================================================================
 
 setlocal
 
-title Install Ledgerlens
+title Install Pivot
 
 echo.
 echo  ============================================================
-echo    Installing Ledgerlens
+echo    Installing Pivot
 echo  ============================================================
 echo.
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$ErrorActionPreference='Stop';" ^
   "Write-Host 'Downloading installer...';" ^
-  "$bytes = (Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/adityavaish/ledgerlens/releases/latest/download/install.ps1').Content;" ^
+  "$bytes = (Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/adityavaish/pivot/releases/latest/download/install.ps1').Content;" ^
   "$text  = if ($bytes -is [byte[]]) { [System.Text.Encoding]::UTF8.GetString($bytes) } else { $bytes };" ^
   "Invoke-Expression $text"
 
@@ -39,7 +39,7 @@ goto :fail
 
 :ok
 echo  ============================================================
-echo    Done! Find "Ledgerlens" in your Start menu to launch it.
+echo    Done! Find "Pivot" in your Start menu to launch it.
 echo  ============================================================
 goto :end
 
@@ -47,7 +47,7 @@ goto :end
 echo  ============================================================
 echo    Install ran into a problem. Exit code: %EXITCODE%
 echo    Please report the error output above at:
-echo      https://github.com/adityavaish/ledgerlens/issues
+echo      https://github.com/adityavaish/pivot/issues
 echo  ============================================================
 goto :end
 

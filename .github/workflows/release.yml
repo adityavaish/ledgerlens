@@ -52,7 +52,7 @@ jobs:
           # npm pack honors the "files" allowlist in package.json and emits a
           # single .tgz with a "package/" prefix the launcher expects.
           out=$(npm pack --pack-destination .)
-          target="ledgerlens-${{ steps.ver.outputs.version }}.tgz"
+          target="pivot-${{ steps.ver.outputs.version }}.tgz"
           if [ "$out" != "$target" ]; then
             mv "$out" "$target"
           fi
@@ -64,6 +64,6 @@ jobs:
           name: ${{ steps.ver.outputs.tag }}
           generate_release_notes: true
           files: |
-            ledgerlens-${{ steps.ver.outputs.version }}.tgz
+            pivot-${{ steps.ver.outputs.version }}.tgz
             scripts/install.ps1
-            scripts/Install-Ledgerlens.cmd
+            scripts/Install-Pivot.cmd

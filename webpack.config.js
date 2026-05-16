@@ -63,9 +63,9 @@ module.exports = (env, argv) => {
       }),
       ...(isDev ? [] : [new MiniCssExtractPlugin({ filename: "[name].css" })]),
       new webpack.EnvironmentPlugin({
-        LEDGERLENS_CLIENT_ID: "",
-        LEDGERLENS_TENANT_ID: "",
-        LEDGERLENS_REDIRECT_URI: "",
+        PIVOT_CLIENT_ID: "",
+        PIVOT_TENANT_ID: "",
+        PIVOT_REDIRECT_URI: "",
       }),
     ],
     devServer: {

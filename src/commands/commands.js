@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — Ribbon Commands.
+ * Pivot — Ribbon Commands.
  * Functions referenced by the manifest for ribbon button actions.
  */
 

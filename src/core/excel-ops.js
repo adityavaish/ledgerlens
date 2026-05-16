@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — Excel Operations Layer.
+ * Pivot — Excel Operations Layer.
  * All Excel mutations go through here. The AI engine calls these methods
  * after interpreting the user's command.
  */
@@ -150,7 +150,7 @@ class ExcelOps {
     return map[type?.toLowerCase()] || Excel.ChartType.columnClustered;
   }
 
-  // ── Ledgerlens Tables ──────────────────────────────────────────────────────
+  // ── Pivot Tables ──────────────────────────────────────────────────────
 
   async createPivot(sourceRange, rows, columns, values) {
     await Excel.run(async (ctx) => {

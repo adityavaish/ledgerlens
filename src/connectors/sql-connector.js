@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — SQL Database Connector.
+ * Pivot — SQL Database Connector.
  * Sends SQL-like natural language queries to a REST proxy endpoint.
  * For security, the add-in does NOT connect directly to databases.
  * Instead it talks to a lightweight API proxy that you deploy alongside your DB.

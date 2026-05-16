@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — MCP Stdio Proxy.
+ * Pivot — MCP Stdio Proxy.
  * Runs server-side inside webpack-dev-server.
  *
  * Spawns local MCP servers as child processes (stdio transport),
@@ -329,7 +329,7 @@ function createStdioProxyMiddleware() {
         const initResult = await proc.sendRequest("initialize", {
           protocolVersion: "2025-03-26",
           capabilities: {},
-          clientInfo: { name: "ledgerlens-excel-addin", version: "1.0.0" },
+          clientInfo: { name: "pivot-excel-addin", version: "1.0.0" },
         }, 90000);
 
         proc.sendNotification("notifications/initialized");
@@ -450,7 +450,7 @@ function createStdioProxyMiddleware() {
     },
   };
 
-  console.log("[Ledgerlens] MCP stdio proxy endpoints registered: /api/mcp-stdio/*");
+  console.log("[Pivot] MCP stdio proxy endpoints registered: /api/mcp-stdio/*");
 
   return function mcpStdioProxy(req, res, next) {
     // Match exact routes or routes with a path parameter pattern

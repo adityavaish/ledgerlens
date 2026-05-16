@@ -4,7 +4,7 @@ const { createStdioProxyMiddleware } = require("../src/server/mcp-stdio-proxy.js
 const { createMcpConfigDiscoveryMiddleware } = require("../src/server/mcp-config-discovery.js");
 
 const app = express();
-const port = Number(process.env.LEDGERLENS_LOCAL_MCP_PORT || 3011);
+const port = Number(process.env.PIVOT_LOCAL_MCP_PORT || 3011);
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -27,5 +27,5 @@ app.use(createMcpConfigDiscoveryMiddleware());
 app.use(createStdioProxyMiddleware());
 
 app.listen(port, "127.0.0.1", () => {
-  console.log(`Ledgerlens local MCP bridge listening on http://127.0.0.1:${port}`);
+  console.log(`Pivot local MCP bridge listening on http://127.0.0.1:${port}`);
 });

@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — Local Kusto proxy.
+ * Pivot — Local Kusto proxy.
  *
  * Designed for the local-runner scenario: the Node server runs on the
  * user's machine, so it can drive azure-kusto-data's `withUserPrompt` flow
@@ -45,7 +45,7 @@ async function getKustoClient(clusterUrl) {
     redirectUri: pickLoopbackHostname(),
     // No clientId override → uses Azure CLI's pre-consented public-client id
     // (`04b07795-8ddb-461a-bbee-02f9e1bf7b46`). Same app az login uses.
-    tenantId: process.env.AZURE_TENANT_ID || process.env.LEDGERLENS_TENANT_ID,
+    tenantId: process.env.AZURE_TENANT_ID || process.env.PIVOT_TENANT_ID,
     additionallyAllowedTenants: ["*"],
   });
 
@@ -180,7 +180,7 @@ function createKustoLocalMiddleware() {
     },
   };
 
-  console.log("[Ledgerlens] Local Kusto endpoints registered: /api/kusto/connect, /api/kusto/query");
+  console.log("[Pivot] Local Kusto endpoints registered: /api/kusto/connect, /api/kusto/query");
 
   return function kustoLocalProxy(req, res, next) {
     const key = `${req.method} ${req.url}`;

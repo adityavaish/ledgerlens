@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — Microsoft Graph Connector.
+ * Pivot — Microsoft Graph Connector.
  * Pulls data from OneDrive Excel files, Outlook, Planner, etc. via Graph API.
  */
 

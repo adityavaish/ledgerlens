@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — Taskpane Entry Point.
+ * Pivot — Taskpane Entry Point.
  * Wires the UI to the AI engine, connector registry, auth, and settings.
  */
 
@@ -41,7 +41,7 @@ let _activeMcpServerId = null;
 let _commandHistory = [];
 let _historyIndex = -1;
 
-const DEFAULT_LOCAL_MCP_BRIDGE_URL = ""; // empty = same-origin (Ledgerlens local server)
+const DEFAULT_LOCAL_MCP_BRIDGE_URL = ""; // empty = same-origin (Pivot local server)
 
 // ── Initialization ──────────────────────────────────────────────────────
 if (typeof Office !== "undefined" && Office.onReady) {
@@ -551,11 +551,11 @@ function onMcpTransportChange() {
 }
 
 function getLocalMcpBridgeUrl() {
-  // Default to same-origin: the Ledgerlens local server itself hosts
+  // Default to same-origin: the Pivot local server itself hosts
   // /api/mcp-stdio/* and /api/mcp-config/discover. Power users can override
   // via localStorage to point at a separate bridge running elsewhere.
   try {
-    const value = localStorage.getItem("ledgerlens_local_mcp_bridge_url");
+    const value = localStorage.getItem("pivot_local_mcp_bridge_url");
     if (!value) return DEFAULT_LOCAL_MCP_BRIDGE_URL;
     return value.replace(/\/+$/, "");
   } catch {
@@ -565,7 +565,7 @@ function getLocalMcpBridgeUrl() {
 
 function setLocalMcpBridgeUrl(url) {
   try {
-    localStorage.setItem("ledgerlens_local_mcp_bridge_url", (url || DEFAULT_LOCAL_MCP_BRIDGE_URL).replace(/\/+$/, ""));
+    localStorage.setItem("pivot_local_mcp_bridge_url", (url || DEFAULT_LOCAL_MCP_BRIDGE_URL).replace(/\/+$/, ""));
   } catch { /* ignore */ }
 }
 
@@ -786,7 +786,7 @@ async function disconnectMcpServer() {
 
 function saveMcpServerConfig(id, config) {
   try {
-    const all = JSON.parse(localStorage.getItem("ledgerlens_mcp_servers") || "{}");
+    const all = JSON.parse(localStorage.getItem("pivot_mcp_servers") || "{}");
     if (config.transport === "stdio") {
       all[id] = {
         transport: "stdio",
@@ -803,24 +803,24 @@ function saveMcpServerConfig(id, config) {
         importedFrom: config.importedFrom || "",
       };
       // API key in sessionStorage for security
-      if (config.apiKey) sessionStorage.setItem(`ledgerlens_mcp_key_${id}`, config.apiKey);
+      if (config.apiKey) sessionStorage.setItem(`pivot_mcp_key_${id}`, config.apiKey);
     }
-    localStorage.setItem("ledgerlens_mcp_servers", JSON.stringify(all));
+    localStorage.setItem("pivot_mcp_servers", JSON.stringify(all));
   } catch { /* ignore */ }
 }
 
 function removeMcpServerConfig(id) {
   try {
-    const all = JSON.parse(localStorage.getItem("ledgerlens_mcp_servers") || "{}");
+    const all = JSON.parse(localStorage.getItem("pivot_mcp_servers") || "{}");
     delete all[id];
-    localStorage.setItem("ledgerlens_mcp_servers", JSON.stringify(all));
-    sessionStorage.removeItem(`ledgerlens_mcp_key_${id}`);
+    localStorage.setItem("pivot_mcp_servers", JSON.stringify(all));
+    sessionStorage.removeItem(`pivot_mcp_key_${id}`);
   } catch { /* ignore */ }
 }
 
 async function loadMcpServers() {
   try {
-    const raw = localStorage.getItem("ledgerlens_mcp_servers");
+    const raw = localStorage.getItem("pivot_mcp_servers");
     if (!raw) return;
     const servers = JSON.parse(raw);
     for (const [id, cfg] of Object.entries(servers)) {
@@ -832,7 +832,7 @@ async function loadMcpServers() {
             proxyBaseUrl: cfg.proxyBaseUrl || getLocalMcpBridgeUrl(),
           });
         } else {
-          const apiKey = sessionStorage.getItem(`ledgerlens_mcp_key_${id}`) || undefined;
+          const apiKey = sessionStorage.getItem(`pivot_mcp_key_${id}`) || undefined;
           await mcpClient.connect(id, cfg.url, { apiKey, transport: cfg.transport || "auto" });
         }
       } catch {
@@ -844,7 +844,7 @@ async function loadMcpServers() {
 
 async function importLocalMcpServers() {
   const proxyBaseUrl = getLocalMcpBridgeUrl();
-  const label = proxyBaseUrl ? proxyBaseUrl : "this Ledgerlens server";
+  const label = proxyBaseUrl ? proxyBaseUrl : "this Pivot server";
   setMcpImportStatus(`Scanning local MCP configs via ${label}…`);
 
   try {
@@ -858,7 +858,7 @@ async function importLocalMcpServers() {
     if (servers.length === 0) {
       setMcpImportStatus(
         "No MCP server configs were found. Looked for VS Code, GitHub Copilot CLI, Claude (Desktop/Code), Cursor, Windsurf, Continue, Roo, Cline and Zed config files. " +
-        "Add servers in those clients (or set LEDGERLENS_MCP_CONFIGS) and retry."
+        "Add servers in those clients (or set PIVOT_MCP_CONFIGS) and retry."
       );
       return;
     }
@@ -908,7 +908,7 @@ async function importLocalMcpServers() {
   } catch (err) {
     setMcpImportStatus(
       `Could not reach the MCP discovery endpoint at ${label}. ` +
-      `Make sure the Ledgerlens local server is running (run \`ledgerlens\`). ${err.message}`,
+      `Make sure the Pivot local server is running (run \`pivot\`). ${err.message}`,
       true,
     );
   }
@@ -928,7 +928,7 @@ function saveSettings() {
   try {
     const store = {};
     if (model) store.model = model;
-    localStorage.setItem("ledgerlens_settings", JSON.stringify(store));
+    localStorage.setItem("pivot_settings", JSON.stringify(store));
   } catch { /* storage unavailable */ }
 
   $panelSettings.classList.add("hidden");
@@ -936,7 +936,7 @@ function saveSettings() {
 
 function loadSettings() {
   try {
-    const raw = localStorage.getItem("ledgerlens_settings");
+    const raw = localStorage.getItem("pivot_settings");
     if (raw) {
       const s = JSON.parse(raw);
       if (s.model) { $settingModel.value = s.model; }
@@ -1000,7 +1000,7 @@ async function toggleAuth() {
     } catch (err) {
       // Surface the sign-in failure inline so the user knows what happened
       // rather than seeing a silent no-op.
-      console.error("[Ledgerlens] sign-in failed:", err);
+      console.error("[Pivot] sign-in failed:", err);
       const msg = err && err.message ? err.message : String(err);
       alert(`Sign-in failed: ${msg}`);
     } finally {
@@ -1013,15 +1013,15 @@ async function toggleAuth() {
 // ── Connector Config Persistence ────────────────────────────────────────
 function saveConnectorConfig(id, config) {
   try {
-    const all = JSON.parse(localStorage.getItem("ledgerlens_connectors") || "{}");
+    const all = JSON.parse(localStorage.getItem("pivot_connectors") || "{}");
     all[id] = config;
-    localStorage.setItem("ledgerlens_connectors", JSON.stringify(all));
+    localStorage.setItem("pivot_connectors", JSON.stringify(all));
   } catch { /* ignore */ }
 }
 
 function loadConnectorConfig(id) {
   try {
-    const all = JSON.parse(localStorage.getItem("ledgerlens_connectors") || "{}");
+    const all = JSON.parse(localStorage.getItem("pivot_connectors") || "{}");
     return all[id] || null;
   } catch { return null; }
 }

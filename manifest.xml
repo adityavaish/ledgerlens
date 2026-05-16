@@ -7,13 +7,13 @@
   xsi:type="TaskPaneApp">
   <Id>77047056-bb69-4ff8-beb9-8c337b5c500e</Id>
   <Version>1.0.0.0</Version>
-  <ProviderName>Ledgerlens</ProviderName>
+  <ProviderName>Pivot</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="Ledgerlens" />
+  <DisplayName DefaultValue="Pivot" />
   <Description DefaultValue="AI-powered assistant for Excel. Use natural language to generate data, build tables, create charts, and more." />
   <IconUrl DefaultValue="http://localhost:3002/assets/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="http://localhost:3002/assets/icon-128.png" />
-  <SupportUrl DefaultValue="https://github.com/adityavaish/ledgerlens" />
+  <SupportUrl DefaultValue="https://github.com/adityavaish/pivot" />
   <AppDomains>
     <AppDomain>https://login.microsoftonline.com</AppDomain>
     <AppDomain>http://localhost:3002</AppDomain>
@@ -75,16 +75,16 @@
       <bt:Urls>
         <bt:Url id="Commands.Url" DefaultValue="http://localhost:3002/commands.html" />
         <bt:Url id="Taskpane.Url" DefaultValue="http://localhost:3002/taskpane.html" />
-        <bt:Url id="LL.GS.LearnMoreUrl" DefaultValue="https://github.com/adityavaish/ledgerlens" />
+        <bt:Url id="LL.GS.LearnMoreUrl" DefaultValue="https://github.com/adityavaish/pivot" />
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="PivotGroup.Label" DefaultValue="Ledgerlens" />
-        <bt:String id="PivotButton.Label" DefaultValue="Open Ledgerlens" />
-        <bt:String id="LL.GS.Title" DefaultValue="Get started with Ledgerlens" />
+        <bt:String id="PivotGroup.Label" DefaultValue="Pivot" />
+        <bt:String id="PivotButton.Label" DefaultValue="Open Pivot" />
+        <bt:String id="LL.GS.Title" DefaultValue="Get started with Pivot" />
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="PivotButton.Tooltip" DefaultValue="Open the Ledgerlens AI assistant to control Excel with natural language" />
-        <bt:String id="LL.GS.Description" DefaultValue="Type what you want and Ledgerlens makes it happen in your spreadsheet." />
+        <bt:String id="PivotButton.Tooltip" DefaultValue="Open the Pivot AI assistant to control Excel with natural language" />
+        <bt:String id="LL.GS.Description" DefaultValue="Type what you want and Pivot makes it happen in your spreadsheet." />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

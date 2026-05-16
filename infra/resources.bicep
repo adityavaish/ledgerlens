@@ -91,7 +91,7 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
     httpsOnly: true
     keyVaultReferenceIdentity: uami.id
     siteConfig: {
-      linuxFxVersion: 'DOCKER|${acr.properties.loginServer}/ledgerlens:latest'
+      linuxFxVersion: 'DOCKER|${acr.properties.loginServer}/pivot:latest'
       acrUseManagedIdentityCreds: true
       acrUserManagedIdentityID: uami.properties.clientId
       alwaysOn: true
@@ -106,7 +106,7 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'DOCKER_REGISTRY_SERVER_URL',                   value: 'https://${acr.properties.loginServer}' }
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',        value: appi.properties.ConnectionString }
         { name: 'GITHUB_TOKEN',                                 value: githubToken }
-        { name: 'LEDGERLENS_COPILOT_MODEL',                     value: copilotModel }
+        { name: 'PIVOT_COPILOT_MODEL',                     value: copilotModel }
         { name: 'AZURE_CLIENT_ID',                              value: uami.properties.clientId }
       ]
     }

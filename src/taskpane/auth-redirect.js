@@ -1,5 +1,5 @@
 /**
- * Ledgerlens — MSAL popup redirect handler.
+ * Pivot — MSAL popup redirect handler.
  *
  * Runs only inside the sign-in popup window after AAD redirects back with
  * an authorization code / hash. It rebuilds a tiny MSAL instance using the
