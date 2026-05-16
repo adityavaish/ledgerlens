@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!--
+    Ledgerlens master icon (128 × 128). Designed to remain legible down to
+    16 × 16: the silhouette reads as "magnifying glass examining a column
+    chart" thanks to the thick outlined lens + diagonal handle. Bars inside
+    the lens evoke a ledger / financial dataset.
+  -->
+  <defs>
+    <linearGradient id="ll-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#0EA47A"/>
+      <stop offset="100%" stop-color="#065F46"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="128" height="128" rx="28" fill="url(#ll-bg)"/>
+
+  <!-- Bars inside lens (drawn first so the lens stroke crops them visually) -->
+  <g fill="#ffffff">
+    <rect x="40" y="58" width="8" height="20" rx="1.5"/>
+    <rect x="52" y="48" width="8" height="30" rx="1.5"/>
+    <rect x="64" y="38" width="8" height="40" rx="1.5"/>
+  </g>
+
+  <!-- Magnifying glass lens + handle -->
+  <g fill="none" stroke="#ffffff" stroke-linecap="round">
+    <circle cx="56" cy="56" r="32" stroke-width="9"/>
+    <line x1="80" y1="80" x2="104" y2="104" stroke-width="11"/>
+  </g>
+</svg>

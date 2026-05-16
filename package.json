@@ -22,6 +22,7 @@
   "scripts": {
     "build": "webpack --mode production",
     "build:dev": "webpack --mode development",
+    "build:icons": "node scripts/build-icons.js",
     "dev-server": "webpack serve --mode development",
     "start": "node bin/ledgerlens.js",
     "start:server": "node server.js",
