@@ -202,23 +202,62 @@ async function ensureOfficeDevCerts(versionDir) {
 }
 
 function trySideloadIntoExcel(versionDir, manifestPath) {
-  // office-addin-debugging ships a .cmd shim on Windows. Node.js >=18 (post
-  // CVE-2024-27980) refuses to spawn .cmd/.bat with shell:false, and it
-  // fails *silently* with a non-zero exit and no output. Invoke the JS
-  // entry through the current Node binary so we don't depend on the shim.
-  const cliJs = path.join(versionDir, "node_modules", "office-addin-debugging", "cli.js");
-  if (fs.existsSync(cliJs)) {
-    log("sideloading manifest into Excel desktop");
-    const res = spawnSync(process.execPath, [cliJs, "start", manifestPath, "desktop"], {
-      stdio: "inherit",
-      shell: false,
-    });
-    if (res.status === 0) return true;
-    warn("sideload returned non-zero status (" + res.status + ") — close Excel completely and rerun, or sideload manually: " + manifestPath);
+  // Excel learns about a "developer add-in" through the registry value
+  //   HKCU\Software\Microsoft\Office\16.0\Wef\Developer\<DisplayName> = <manifestPath>
+  // office-addin-debugging also creates a throwaway xlsx with an embedded
+  // <WebExtension> reference, then opens it — which is why Excel previously
+  // launched with a file named "Excel add-in <guid>.xlsx" in the title bar.
+  // That xlsx isn't necessary: Excel reads the Wef\Developer key on every
+  // launch and surfaces the add-in's ribbon control to any workbook the
+  // user opens. So we write the registry directly and launch Excel with
+  // no file argument, giving the user a clean Excel start screen.
+  if (process.platform !== "win32") {
+    warn("automatic sideload is Windows-only; sideload manually: " + manifestPath);
     return false;
   }
-  warn("office-addin-debugging not installed; sideload manually: " + manifestPath);
-  return false;
+
+  const wefDeveloper = "HKCU\\Software\\Microsoft\\Office\\16.0\\Wef\\Developer";
+  const writes = [
+    ["Ledgerlens",      "REG_SZ",    manifestPath],
+    ["EnableDebugging", "REG_DWORD", "1"],
+    ["UseEdgeChromium", "REG_DWORD", "1"],
+  ];
+  for (const [name, type, data] of writes) {
+    const r = spawnSync("reg", ["add", wefDeveloper, "/v", name, "/t", type, "/d", data, "/f"], {
+      stdio: "ignore",
+      shell: false,
+    });
+    if (r.status !== 0) {
+      warn("could not write " + name + " under " + wefDeveloper);
+      return false;
+    }
+  }
+  log("registered Ledgerlens developer add-in");
+
+  // If Excel is already running, the registry change only takes effect on
+  // the next cold start. Tell the user instead of forcing a close.
+  const tasks = spawnSync("tasklist", ["/FI", "IMAGENAME eq EXCEL.EXE", "/NH"], {
+    encoding: "utf8",
+    shell: false,
+  });
+  if (tasks.stdout && /EXCEL\.EXE/i.test(tasks.stdout)) {
+    log("Excel is already running. Close every Excel window and reopen it to see Ledgerlens.");
+    return true;
+  }
+
+  // Launch Excel detached, no file argument — opens to the normal Start
+  // screen (Backstage / Recent), no temp file in the title bar.
+  log("opening Excel…");
+  spawn("cmd", ["/c", "start", "", "excel"], { stdio: "ignore", detached: true, shell: false }).unref();
+  return true;
+}
+
+function unregisterDevAddin() {
+  if (process.platform !== "win32") return;
+  spawnSync("reg", [
+    "delete", "HKCU\\Software\\Microsoft\\Office\\16.0\\Wef\\Developer",
+    "/v", "Ledgerlens", "/f",
+  ], { stdio: "ignore", shell: false });
 }
 async function main() {
   const installDir = getInstallDir();
@@ -248,10 +287,18 @@ async function main() {
     stdio: "inherit",
   });
   let stopped = false;
-  const stop = () => { if (stopped) return; stopped = true; try { child.kill(); } catch { /* ignore */ } };
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    // Remove the dev-add-in registry entry so future Excel starts don't
+    // try to load a manifest pointing at an https://localhost:<port>
+    // server that's no longer running.
+    unregisterDevAddin();
+    try { child.kill(); } catch { /* ignore */ }
+  };
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
-  child.on("exit", (code) => { log("server exited (code " + code + ")"); process.exit(code || 0); });
+  child.on("exit", (code) => { unregisterDevAddin(); log("server exited (code " + code + ")"); process.exit(code || 0); });
   const ready = await waitForServer("127.0.0.1", port, 15000);
   if (!ready) warn("server did not become ready within 15s");
   else {
