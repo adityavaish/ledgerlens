@@ -19,21 +19,20 @@ const app = express();
 const PORT = process.env.PORT || 3002;
 
 /**
- * Load the office-addin-dev-certs key/cert if available so the server can
- * speak HTTPS. Excel only loads add-in manifests whose `SourceLocation`
+ * Load the office-addin-dev-certs key/cert directly off disk so the server
+ * can speak HTTPS. Excel only loads add-in manifests whose `SourceLocation`
  * is https://, so this is required for a successful sideload. Falls back
  * to HTTP for non-Excel callers (browser preview, `curl /health`).
+ *
+ * The cert files are laid down at ~/.office-addin-dev-certs/ by the
+ * launcher's ensureCertificatesAreInstalled() call. We don't go back through
+ * `office-addin-dev-certs.getHttpsServerOptions` because it's async — calling
+ * it synchronously yields a Promise that https.createServer cheerfully
+ * accepts as "options" but then has no key/cert, leading to silent TLS
+ * handshake failures with no observable cert error.
  */
 function tryGetHttpsOptions() {
   if (process.env.LEDGERLENS_FORCE_HTTP === "1") return null;
-  try {
-    const certs = require("office-addin-dev-certs");
-    if (typeof certs.getHttpsServerOptions === "function") {
-      return certs.getHttpsServerOptions();
-    }
-  } catch { /* package missing — fall back to HTTP */ }
-  // Manual lookup as a backstop: the CLI lays files at
-  // ~/.office-addin-dev-certs/{localhost.key, localhost.crt, ca.crt}.
   const certsDir = path.join(process.env.USERPROFILE || process.env.HOME || ".", ".office-addin-dev-certs");
   const keyPath = path.join(certsDir, "localhost.key");
   const crtPath = path.join(certsDir, "localhost.crt");
