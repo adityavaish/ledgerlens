@@ -97,7 +97,7 @@ Ok "Dependencies installed"
 
 # 6. Pin "current" to the just-installed version.
 $current = @{ version = $version; path = $targetDir; installedAt = (Get-Date).ToString('o') } | ConvertTo-Json
-Set-Content -Path (Join-Path $installDir 'current.json') -Value $current -Encoding UTF8
+[System.IO.File]::WriteAllText((Join-Path $installDir 'current.json'), $current, (New-Object System.Text.UTF8Encoding $false))
 
 # 7. Stable dispatcher + .cmd shim. The dispatcher reads current.json each
 # launch so future auto-updates take effect without re-running the installer.
@@ -109,7 +109,9 @@ const installDir = process.env.LEDGERLENS_HOME ||
   (process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'ledgerlens') : path.join(require('os').homedir(), '.ledgerlens'));
 let cur;
 try {
-  cur = JSON.parse(fs.readFileSync(path.join(installDir, 'current.json'), 'utf8'));
+  let _raw = fs.readFileSync(path.join(installDir, 'current.json'), 'utf8');
+  if (_raw.charCodeAt(0) === 0xFEFF) _raw = _raw.slice(1);
+  cur = JSON.parse(_raw);
 } catch (err) {
   console.error('[ledgerlens] no current.json at ' + installDir + ' \u2014 reinstall from https://github.com/adityavaish/ledgerlens');
   process.exit(1);
@@ -122,7 +124,7 @@ if (!fs.existsSync(launcher)) {
 const r = spawnSync(process.execPath, [launcher, ...process.argv.slice(2)], { stdio: 'inherit', shell: false });
 process.exit(r.status == null ? 1 : r.status);
 "@
-Set-Content -Path (Join-Path $binDir 'ledgerlens-dispatch.js') -Value $dispatcher -Encoding UTF8
+[System.IO.File]::WriteAllText((Join-Path $binDir 'ledgerlens-dispatch.js'), $dispatcher, (New-Object System.Text.UTF8Encoding $false))
 
 $shim = "@echo off`r`nnode `"%LOCALAPPDATA%\Programs\ledgerlens\ledgerlens-dispatch.js`" %*`r`n"
 Set-Content -Path (Join-Path $binDir 'ledgerlens.cmd') -Value $shim -Encoding ASCII

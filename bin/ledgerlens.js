@@ -22,7 +22,11 @@ function getInstallDir() {
 }
 
 function loadCurrent(installDir) {
-  try { return JSON.parse(fs.readFileSync(path.join(installDir, "current.json"), "utf8")); } catch { return null; }
+  try {
+    let raw = fs.readFileSync(path.join(installDir, "current.json"), "utf8");
+    if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+    return JSON.parse(raw);
+  } catch { return null; }
 }
 function saveCurrent(installDir, payload) {
   fs.mkdirSync(installDir, { recursive: true });
