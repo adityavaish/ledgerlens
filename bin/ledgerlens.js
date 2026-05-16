@@ -120,7 +120,11 @@ async function ensureLatestVersion(installDir) {
         const r = spawnSync(npmCmd, ["install", "--omit=dev", "--no-audit", "--no-fund", "--loglevel=error"], {
           cwd: targetDir,
           stdio: "inherit",
-          shell: false,
+          // Node 18+ refuses to spawn .cmd/.bat files with shell:false
+          // (CVE-2024-27980). On Windows we have to set shell:true so the
+          // npm.cmd shim is interpreted by cmd.exe; otherwise spawnSync
+          // exits with status null and no stderr, masking the failure.
+          shell: process.platform === "win32",
         });
         if (r.status !== 0) {
           throw new Error("npm install failed with exit code " + r.status);
